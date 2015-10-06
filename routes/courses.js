@@ -23,9 +23,10 @@ router.get('/:courseid', function(req, res) {
     })
 });
 
-var build = [];
-var course = {};
+
 router.get('/:courseid/classes', function(req, res) {
+    var build = [];
+    var course = {};
     db.collection('courses').find({ID: req.params.courseid}).toArray(function(err, data) {
         if (err) {
             res.send(err);

@@ -14,7 +14,6 @@ var server = app.listen(3000, function () {
     console.log('Example app listening on port: ',  port);
 });
 
-app.use('/classes', require('./routes/classes'));
 app.use('/courses', require('./routes/courses'));
 
 

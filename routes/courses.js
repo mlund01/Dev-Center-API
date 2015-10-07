@@ -46,7 +46,7 @@ router.get('/:courseid/classes', function(req, res) {
                             var response = build;
                             build = [];
                             course = {};
-                            res.status(200).json(response);
+                            res.json(response);
                         }
                     }
                 });

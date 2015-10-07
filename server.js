@@ -13,7 +13,11 @@ var server = app.listen(process.env.PORT, function () {
     var port = server.address().port;
     console.log('Example app listening on port: ',  port);
 });
-
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, authorization");
+    next();
+});
 app.use(bodyParser.json());
 app.use('/courses', require('./routes/courses'));
 

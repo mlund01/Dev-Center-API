@@ -6,9 +6,9 @@ var router = require('express').Router();
 router.get('/', function(req, res) {
     db.collection('courses').find({}).toArray(function(err, data) {
         if (err) {
-            res.send(err);
+            res.status(404).send(err);
         } else {
-            res.send(data);
+            res.status(200).send(data);
         }
     });
 });
@@ -16,9 +16,9 @@ router.get('/', function(req, res) {
 router.get('/:courseid', function(req, res) {
     db.collection('courses').find({ID: req.params.courseid}).toArray(function(err, data) {
         if (err) {
-            res.send(err);
+            res.status(404).send(err);
         } else {
-            res.send(data[0]);
+            res.status(200).send(data[0]);
         }
     })
 });
@@ -29,13 +29,13 @@ router.get('/:courseid/classes', function(req, res) {
     var course = {};
     db.collection('courses').find({ID: req.params.courseid}).toArray(function(err, data) {
         if (err) {
-            res.send(err);
+            res.status(404).send(err);
         } else {
             course = data[0];
             course.Classes.forEach(function(each) {
                 db.collection('classes').find({ID: each}).toArray(function(err, c) {
                     if (err) {
-                        res.send(err);
+                        res.status(404).send(err);
                     } else {
                         delete c[0].ScriptModels;
                         delete c[0].Assert;
@@ -46,7 +46,7 @@ router.get('/:courseid/classes', function(req, res) {
                             var response = build;
                             build = [];
                             course = {};
-                            res.send(response);
+                            res.status(200).send(response);
                         }
                     }
                 });
@@ -59,9 +59,9 @@ router.get('/:courseid/classes', function(req, res) {
 router.get('/:courseid/classes/:classid', function(req, res) {
     db.collection('classes').find({ID: req.params.classid}).toArray(function(err, data) {
         if (err) {
-            res.send(err);
+            res.status(404).send(err);
         } else {
-            res.send(data[0]);
+            res.status(200).send(data[0]);
         }
     });
 });

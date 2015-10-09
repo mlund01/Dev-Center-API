@@ -9,7 +9,7 @@ MongoClient.connect(uri, function(err, database) {
     console.log('connected to database');
 });
 
-var server = app.listen(55555, function () {
+var server = app.listen(process.env.PORT, function () {
     var port = server.address().port;
     console.log('Example app listening on port: ',  port);
 });

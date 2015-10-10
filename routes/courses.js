@@ -5,7 +5,7 @@ var router = require('express').Router();
 
 router.get('/', function(req, res) {
     //Get Courses
-    db.collection('courses').find({}).toArray(function(err, data) {
+    db.collection('courses').find({}, {_id: 0}).toArray(function(err, data) {
         if (err) {
             res.status(404).json(err);
         } else {
@@ -16,7 +16,7 @@ router.get('/', function(req, res) {
 
 router.get('/:courseid', function(req, res) {
     //Get Course
-    db.collection('courses').find({ID: req.params.courseid}).toArray(function(err, data) {
+    db.collection('courses').find({ID: req.params.courseid}, {_id: 0}).toArray(function(err, data) {
         if (err) {
             res.status(404).json(err);
         } else {
@@ -37,15 +37,11 @@ router.get('/:courseid/classes', function(req, res) {
             course = data[0];
             if (course) {
                 course.Classes.forEach(function(each) {
-                    db.collection('classes').find({ID: each}).toArray(function(err, c) {
+                    db.collection('classes').find({ID: each}, {_id: 0, Name: 1, Description: 1, ID: 1} ).toArray(function(err, c) {
                         if (c.length > 0) {
                             if (err) {
                                 res.status(404).json(err);
                             } else {
-                                delete c[0].ScriptModels;
-                                delete c[0].Assert;
-                                delete c[0].Dependencies;
-                                delete c[0].ClassMethods;
                                 build.push(c[0]);
                                 if (build.length == course.Classes.length) {
                                     var response = build;
@@ -74,11 +70,12 @@ router.get('/:courseid/classes', function(req, res) {
 
 router.get('/:courseid/classes/:classid', function(req, res) {
     //Get Class
-    db.collection('classes').find({ID: req.params.classid}).toArray(function(err, data) {
+    db.collection('classes').find({ID: req.params.classid}, {_id: 0}).toArray(function(err, data) {
         if (err) {
             res.status(404).json(err);
         } else {
-            res.status(200).json(data[0]);
+            var response = data[0];
+            res.status(200).json(response);
         }
     });
 });
@@ -93,19 +90,23 @@ router.post('/:courseid/classes/:classid', function(req, res) {
             {ID: req.params.classid},
             req.body,
             function(err, result) {
-                if (result.result.nModified == 0) {
-                    res.statusCode = 404;
-                    res.send('classid not found')
-                } else {
-                    if (err) {
-                        res.statusCode = 400;
-                        res.send(err);
+                if (result) {
+                    if (result.result.nModified == 0) {
+                        res.statusCode = 404;
+                        res.send('classid not found')
                     } else {
-                        res.statusCode = 204;
-                        res.send();
+                        if (err) {
+                            res.statusCode = 400;
+                            res.send(err);
+                        } else {
+                            res.statusCode = 204;
+                            res.send();
+                        }
                     }
+                } else {
+                    res.statusCode = 404;
+                    res.end('class not found');
                 }
-
             }
         )
     }
@@ -128,7 +129,6 @@ router.post('/:courseid/class/create', function(req, res) {
                     {ID: req.params.courseid},
                     { $push: {Classes: req.body.ID}},
                     function (err, result) {
-                        console.log(result.result.n);
                         if (err || result.result.n == 0) {
                             db.collection('classes').deleteOne({ID: req.body.ID},
                                 function(err, delResult) {

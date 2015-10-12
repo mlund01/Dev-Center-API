@@ -1,5 +1,8 @@
 var router = require('express').Router();
-
+var Logger = require('le_node');
+var log = new Logger({
+    token: '53ee35a0-698a-4357-b3b7-c1c39139856a'
+});
 
 
 
@@ -7,8 +10,10 @@ router.get('/', function(req, res) {
     //Get Courses
     db.collection('courses').find({}, {_id: 0}).toArray(function(err, data) {
         if (err) {
+            log.err({collection: 'course', action: 'Get Courses', endpoint: '/courses', error: err});
             res.status(404).json(err);
         } else {
+            log.info({msg: 'Entered Courses Page'});
             res.status(200).json(data);
         }
     });
@@ -18,9 +23,19 @@ router.get('/:courseid', function(req, res) {
     //Get Course
     db.collection('courses').find({ID: req.params.courseid}, {_id: 0}).toArray(function(err, data) {
         if (err) {
+            log.err({collection: 'course', action: 'Get Course', endpoint: '/courses/' + req.params.courseid, error: err});
             res.status(404).json(err);
         } else {
-            res.status(200).json(data[0]);
+            if (data.length == 0) {
+                log.err({collection: 'course', action: 'Get Course', endpoint: '/courses/' + req.params.courseid, error: 'course not found'});
+                res.status(404).json({error: 'course not found'});
+            } else {
+                if (!req.header.Administrator) {
+                    log.info({course: req.params.courseid, method: 'GET', action: 'Viewed Course', msg: 'Entered ' + req.params.courseid + ' Course Page'});
+                }
+                res.status(200).json(data[0]);
+            }
+
         }
     })
 });
@@ -42,6 +57,7 @@ router.get('/:courseid/classes', function(req, res) {
                             if (err) {
                                 res.status(404).json(err);
                             } else {
+                                c[0].CourseOrder = course.Classes.indexOf(each) + 1;
                                 build.push(c[0]);
                                 if (build.length == course.Classes.length) {
                                     var response = build;
@@ -75,6 +91,9 @@ router.get('/:courseid/classes/:classid', function(req, res) {
             res.status(404).json(err);
         } else {
             var response = data[0];
+            if (!req.headers.Administrator) {
+                log.info({_course: req.params.courseid, _class: req.params.classid, Method: 'GET', action: 'Started Class', msg: 'Entered ' + req.params.classid + ' class in ' + req.params.courseid + ' course.'});
+            }
             res.status(200).json(response);
         }
     });

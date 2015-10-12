@@ -30,10 +30,17 @@ router.get('/:courseid', function(req, res) {
                 log.err({collection: 'course', action: 'Get Course', endpoint: '/courses/' + req.params.courseid, error: 'course not found'});
                 res.status(404).json({error: 'course not found'});
             } else {
-                if (!req.header.Administrator) {
-                    log.info({course: req.params.courseid, method: 'GET', action: 'Viewed Course', msg: 'Entered ' + req.params.courseid + ' Course Page'});
+                if (!req.header.administrator) {
+                    if (!data[0].Active) {
+                        res.status(404).json({error: req.params.courseid + ' is inactive'})
+                    } else {
+                        log.info({course: req.params.courseid, method: 'GET', action: 'Viewed Course', msg: 'Entered ' + req.params.courseid + ' Course Page'});
+                        res.status(200).json(data[0]);
+                    }
+                } else {
+                    res.status(200).json(data[0]);
                 }
-                res.status(200).json(data[0]);
+
             }
 
         }
@@ -45,39 +52,45 @@ router.get('/:courseid/classes', function(req, res) {
     //Get Classes in Course
     var build = [];
     var course = {};
+    var adjustLength = 0;
     db.collection('courses').find({ID: req.params.courseid}).toArray(function(err, data) {
         if (err) {
             res.status(404).json(err);
         } else {
             course = data[0];
-            if (course) {
-                course.Classes.forEach(function(each) {
-                    db.collection('classes').find({ID: each}, {_id: 0, Name: 1, Description: 1, ID: 1} ).toArray(function(err, c) {
-                        if (c.length > 0) {
-                            if (err) {
-                                res.status(404).json(err);
-                            } else {
-                                c[0].CourseOrder = course.Classes.indexOf(each) + 1;
-                                build.push(c[0]);
-                                if (build.length == course.Classes.length) {
-                                    var response = build;
-                                    build = [];
-                                    course = {};
-                                    res.json(response);
-                                }
-                            }
-                        } else {
-                            res.statusCode = 404;
-                            res.end(each + ' not found');
-                        }
-
-                    });
-                });
+            if (course && !course.Active && !req.headers.administrator) {
+                res.status(400).json({error: req.params.coursid + ' is inactive'})
             } else {
-                res.statusCode = 404;
-                res.end(req.params.courseid + ' not found');
-            }
+                if (course) {
+                    course.Classes.forEach(function(each) {
+                        db.collection('classes').find({ID: each}, {_id: 0, Name: 1, Description: 1, ID: 1, Active: 1} ).toArray(function(err, c) {
+                            if (c.length > 0) {
+                                if (err) {
+                                    res.status(404).json(err);
+                                } else {
+                                    c[0].CourseOrder = course.Classes.indexOf(each) + 1;
+                                    if (c[0].Active || req.headers.administrator && !c[0].Active) {
+                                        delete c[0].Active;
+                                        build.push(c[0]);
+                                    } else {
+                                        adjustLength += 1;
+                                    }
+                                    ///here///
+                                    if (build.length == course.Classes.length - adjustLength) {
+                                        res.json(build);
+                                    }
+                                }
+                            } else {
+                                build.push({ID: each, Name: '404', Description: 'Not Found'})
+                            }
 
+                        });
+                    });
+                } else {
+                    res.statusCode = 404;
+                    res.json({error: req.params.courseid + ' course not found'});
+                }
+            }
 
         }
     });
@@ -86,17 +99,32 @@ router.get('/:courseid/classes', function(req, res) {
 
 router.get('/:courseid/classes/:classid', function(req, res) {
     //Get Class
-    db.collection('classes').find({ID: req.params.classid}, {_id: 0}).toArray(function(err, data) {
-        if (err) {
-            res.status(404).json(err);
+    db.collection('courses').find({ID: req.params.courseid}, {_id: 0, Classes: 1}).toArray(function(err, data) {
+        if (!data[0]) {
+            res.status(400).json({error: req.params.courseid + ' course does not exist'})
+        }
+        else if (data[0].Classes.indexOf(req.params.classid) == -1) {
+            res.status(400).json({error: req.params.classid + ' class is not in ' + req.params.courseid + ' course, or does not exist'})
         } else {
-            var response = data[0];
-            if (!req.headers.Administrator) {
-                log.info({_course: req.params.courseid, _class: req.params.classid, Method: 'GET', action: 'Started Class', msg: 'Entered ' + req.params.classid + ' class in ' + req.params.courseid + ' course.'});
-            }
-            res.status(200).json(response);
+            db.collection('classes').find({ID: req.params.classid}, {_id: 0}).toArray(function(err, data) {
+                if (err) {
+                    res.status(404).json(err);
+                } else {
+                    var response = data[0];
+                    if (!req.headers.administrator && response.Active) {
+                        log.info({_course: req.params.courseid, _class: req.params.classid, Method: 'GET', action: 'Started Class', msg: 'Entered ' + req.params.classid + ' class in ' + req.params.courseid + ' course.'});
+                        res.status(200).json(response);
+                    } else if (!req.headers.administrator && !response.Active) {
+                        res.status(400).json({error: req.params.classid + ' is inactive'})
+                    } else {
+                        res.status(200).json(response);
+                    }
+
+                }
+            });
         }
     });
+
 });
 
 router.post('/:courseid/classes/:classid', function(req, res) {

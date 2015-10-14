@@ -1,7 +1,7 @@
 var express = require('express');
 var app = express();
 var MongoClient = require('mongodb').MongoClient;
-var uri = "mongodb://devadmin:fails345@ds029804.mongolab.com:29804/451devcentertest";
+var uri = "mongodb://devadmin:fails345@ds039024-a0.mongolab.com:39024,ds039024-a.mongolab.com:39024/451devcenter?replicaSet=rs-ds039024";
 var bodyParser = require('body-parser');
 
 MongoClient.connect(uri, function(err, database) {

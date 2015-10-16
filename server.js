@@ -23,20 +23,29 @@ if (process.argv[2] == 'dev') {
 }
 
 app.set('secret_key', process.env.SECRET_KEY || 'dslfdjlkdj');
-app.set('encryption_key', process.env.CRYPTO_KEY || 'dkdkdkd');
+app.set('encryption_key_1', process.env.CRYPTO_KEY_1 || 'dkdkdkd');
+app.set('encryption_key_2', process.env.CRYPTO_KEY_2 || 'jsgfdg');
 app.use(bodyParser.json());
 
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, authorization, Administrator, Auth, Identity");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, authorization, Administrator, dc-token, Identity");
     next();
 });
 
+//Unauthenticated Endpoints
 app.use('/authenticate', require('./routes/auth'));
-app.use('/registerdevuser', require('./routes/register'));
+
+//Middleware
 app.use(require('./routes/middleware'));
 
+//Authenticated Endpoints
+app.use('/admin', require('./routes/admin'));
 app.use('/courses', require('./routes/courses'));
+app.use('/users', require('./routes/users'));
+
+
+
 
 
 

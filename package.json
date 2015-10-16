@@ -28,7 +28,8 @@
     "mongodb": "^2.0.45",
     "mongojs": "^1.4.0",
     "morgan": "~1.6.1",
-    "serve-favicon": "~2.3.0"
+    "serve-favicon": "~2.3.0",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "gulp": "gulpjs/gulp#4.0"

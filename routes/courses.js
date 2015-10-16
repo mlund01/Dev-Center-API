@@ -3,8 +3,25 @@ var Logger = require('le_node');
 var log = new Logger({
     token: '53ee35a0-698a-4357-b3b7-c1c39139856a'
 });
+var Underscore = require('underscore');
 
 
+//NON-ADMIN ENDPOINTS
+
+
+function requireField(field, body, errors) {
+    var success = false;
+    for (var val in body) {
+        if (field == val) {
+            success = true;
+        }
+    }
+    if (!success) {
+        errors.push("'" + field + "'" + " is required");
+    }
+    return errors;
+
+}
 
 router.get('/', function(req, res) {
     //Get Courses
@@ -127,6 +144,19 @@ router.get('/:courseid/classes/:classid', function(req, res) {
 
 });
 
+
+//ADMIN ENDPOINTS
+
+
+router.use(function(req, res, next) {
+    if (req.User.Admin) {
+        next();
+    } else {
+        res.status(405).json({error: 'Must be an Admin User to Make Requests in ' + req.baseUrl})
+    }
+});
+
+
 router.post('/:courseid/classes/:classid', function(req, res) {
     //Update Class
     if (req.body.ID != req.params.classid) {
@@ -160,48 +190,55 @@ router.post('/:courseid/classes/:classid', function(req, res) {
 
 });
 
-router.post('/:courseid/class/create', function(req, res) {
+router.post('/:courseid/create-class', function(req, res) {
     //Create Class
-    if (!req.body.ID) {
-        res.end('Must include "ID" in request body')
-    }
-    db.collection('classes').insertOne(
-        req.body,
-        function(err, result) {
-            if (err) {
-                res.statusCode = 400;
-                res.end('ClassID already exists')
-            } else {
-                db.collection('courses').update(
-                    {ID: req.params.courseid},
-                    { $push: {Classes: req.body.ID}},
-                    function (err, result) {
-                        if (err || result.result.n == 0) {
-                            db.collection('classes').deleteOne({ID: req.body.ID},
-                                function(err, delResult) {
+    var errors = [];
+    var requiredFields = ['Name', 'Active', 'Description'];
+    requiredFields.forEach(function(each) {
+        requireField(each, req.body, errors);
+    });
+    if (errors.length != 0) {
+        res.status(401).json({error: 'Missing Fields', fields: errors});
+    } else {
+        db.collection('classes').insertOne(
+            req.body,
+            function(err, result) {
+                if (err) {
+                    res.statusCode = 400;
+                    res.end('ClassID already exists')
+                } else {
+                    db.collection('courses').update(
+                        {ID: req.params.courseid},
+                        { $push: {Classes: req.body.ID}},
+                        function (err, result) {
+                            if (err || result.result.n == 0) {
+                                db.collection('classes').deleteOne({ID: req.body.ID},
+                                    function(err, delResult) {
 
-                                    if (err) {
-                                        res.statusCode = 400;
-                                        res.end('class created but not added to course');
-                                    } else {
-                                        if (result.result.n == 0) {
-                                            res.statusCode = 404;
-                                            res.end('courseID does not exist');
+                                        if (err) {
+                                            res.statusCode = 400;
+                                            res.end('class created but not added to course');
                                         } else {
-                                            res.statusCode = 404;
-                                            res.end('class could not be added to course');
+                                            if (result.result.n == 0) {
+                                                res.statusCode = 404;
+                                                res.end('courseID does not exist');
+                                            } else {
+                                                res.statusCode = 404;
+                                                res.end('class could not be added to course');
+                                            }
                                         }
-                                    }
-                                })
-                        } else {
-                            res.statusCode = 204;
-                            res.end();
+                                    })
+                            } else {
+                                res.statusCode = 204;
+                                res.end();
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
-        }
-    )
+        )
+    }
+
 });
 
 router.post('/create', function(req, res) {
@@ -260,6 +297,43 @@ router.post('/:courseid/update', function(req, res) {
     }
 
 
+});
+
+router.patch('/:courseid', function(req, res) {
+    //Patch Class
+    if (!req.body) {
+        res.status(401).json({error: "request body is required"})
+    }
+    else {
+        var modObj = {};
+        var oldKeys = [];
+        db.collection('courses').findOne({ID: req.params.courseid}, function(err, data) {
+            if (err) {
+                res.status(500).json({error: "system error", mongoError: err})
+            } else if (!data) {
+                res.status(404).json({error: req.params.courseid + ' not found'})
+            } else {
+                for (var key in data) {
+                    oldKeys.push(key);
+                }
+                for (var newKey in req.body) {
+                    if (oldKeys.indexOf(newKey) > -1) {
+                        modObj[newKey] = req.body[newKey];
+                    }
+                }
+
+                db.collection('courses').updateOne({ID: req.params.courseid}, {"$set": modObj}, function(err, data) {
+                    if (err) {
+                        res.status(500).json({error: 'class could not be updated'})
+                    } else if (data.result.nModified == 0) {
+                        res.status(404).json({error: req.params.courseid + ' not found'})
+                    } else {
+                        res.status(204).send();
+                    }
+                })
+            }
+        });
+    }
 });
 
 module.exports = router;

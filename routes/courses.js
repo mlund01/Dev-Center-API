@@ -76,7 +76,7 @@ router.get('/:courseid/classes', function(req, res) {
         } else {
             course = data[0];
             if (course && !course.Active && !req.headers.administrator) {
-                res.status(400).json({error: req.params.coursid + ' is inactive'})
+                res.status(400).json({error: req.params.courseid + ' is inactive'})
             } else {
                 if (course) {
                     course.Classes.forEach(function(each) {

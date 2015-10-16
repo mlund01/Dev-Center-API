@@ -16,12 +16,12 @@ router.use(function(req, res, next) {
     if (token) {
         jwt.verify(token, app.get('secret_key'), function(err, decoded) {
             if (err) {
-                return res.status(404).json({error: 'Unauthorized', msg: 'Your authorization token is invalid'})
+                return res.status(401).json({error: 'Unauthorized', msg: 'Your authorization token is invalid'})
             } else {
                 try {
                     var decryptedID = decrypt(decoded);
                 } catch(err) {
-                    res.status(400).json({error: err.toString(), msg: 'Your authorization token is invalid.'})
+                    res.status(401).json({error: err.toString(), msg: 'Your authorization token is invalid.'})
                 }
                 if (decryptedID) {
                     db.collection('users').findOne({Identity: decryptedID}, {_id: 0}, function(err, data) {
@@ -29,7 +29,7 @@ router.use(function(req, res, next) {
                             req.User = data;
                             next();
                         } else {
-                            res.status(404).json({error: 'Unauthorized', msg: 'User could not be found'})
+                            res.status(403).json({msg: 'Token accepted but user could not be found'})
                         }
                     });
                 }
@@ -37,7 +37,7 @@ router.use(function(req, res, next) {
             }
         })
     } else {
-        return res.status(404).json({error: 'Unauthorized', msg: 'You must provide an authorization token.'})
+        return res.status(401).json({error: 'Unauthorized', msg: 'You must provide an authorization token.'})
 
     }
 });

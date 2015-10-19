@@ -152,7 +152,7 @@ router.use(function(req, res, next) {
     if (req.User.Admin) {
         next();
     } else {
-        res.status(405).json({error: 'Must be an Admin User to Make Requests in ' + req.baseUrl})
+        res.status(405).json({error: 'Must be an Admin User to Make this Request in ' + req.baseUrl})
     }
 });
 
@@ -335,5 +335,23 @@ router.patch('/:courseid', function(req, res) {
         });
     }
 });
+
+router.get('/checkIfIdExists/:courseid', function(req, res) {
+    //Check if CourseID exists
+    if (req.query.collection == 'courses' || req.query.collection == 'classes') {
+        db.collection(req.query.collection).findOne({ID: req.params.courseid}, function(err, data) {
+            if (err) {
+                res.status(500).json({error: err});
+            } else if (!data) {
+                res.status(200).json({exists: false});
+            } else {
+                res.status(200).json({exists: true});
+            }
+        })
+    } else {
+        res.status(406).json({error: "collection query param must be set to 'courses' or 'classes'"});
+    }
+});
+
 
 module.exports = router;

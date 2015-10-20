@@ -38,7 +38,7 @@ router.get('/', function(req, res) {
 
 router.get('/:courseid', function(req, res) {
     //Get Course
-    db.collection('courses').find({ID: req.params.courseid}, {_id: 0}).toArray(function(err, data) {
+    db.collection('courses').find({ID: req.params.courseid, CourseType: req.query.courseType}, {_id: 0}).toArray(function(err, data) {
         if (err) {
             log.err({collection: 'course', action: 'Get Course', endpoint: '/courses/' + req.params.courseid, error: err});
             res.status(404).json(err);
@@ -79,8 +79,13 @@ router.get('/:courseid/classes', function(req, res) {
                 res.status(400).json({error: req.params.courseid + ' is inactive'})
             } else {
                 if (course) {
+                    if (Underscore.isEmpty(req.query)) {
+                        req.query = {_id: 0};
+                    } else {
+                        req.query._id = 0;
+                    }
                     course.Classes.forEach(function(each) {
-                        db.collection('classes').find({ID: each}, {_id: 0, Name: 1, Description: 1, ID: 1, Active: 1} ).toArray(function(err, c) {
+                        db.collection('classes').find({ID: each}, req.query ).toArray(function(err, c) {
                             if (c.length > 0) {
                                 if (err) {
                                     res.status(404).json(err);

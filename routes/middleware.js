@@ -12,34 +12,39 @@ function decrypt(text){
 }
 
 router.use(function(req, res, next) {
-    var token = req.headers['dc-token'];
-    if (token) {
-        jwt.verify(token, app.get('secret_key'), function(err, decoded) {
-            if (err) {
-                return res.status(401).json({error: 'Unauthorized', msg: 'Your authorization token is invalid'})
-            } else {
-                try {
-                    var decryptedID = decrypt(decoded);
-                } catch(err) {
-                    res.status(401).json({error: err.toString(), msg: 'Your authorization token is invalid.'})
-                }
-                if (decryptedID) {
-                    db.collection('users').findOne({Identity: decryptedID}, {_id: 0}, function(err, data) {
-                        if (!err && data) {
-                            req.User = data;
-                            next();
-                        } else {
-                            res.status(403).json({msg: 'Token accepted but user could not be found'})
-                        }
-                    });
-                }
-
-            }
-        })
+    if (req.method == 'OPTIONS') {
+        res.status(200).end();
     } else {
-        return res.status(401).json({error: 'Unauthorized', msg: 'You must provide an authorization token.'})
+        var token = req.headers['dc-token'];
+        if (token) {
+            jwt.verify(token, app.get('secret_key'), function(err, decoded) {
+                if (err) {
+                    return res.status(401).json({error: 'Unauthorized', msg: 'Your authorization token is invalid'})
+                } else {
+                    try {
+                        var decryptedID = decrypt(decoded);
+                    } catch(err) {
+                        res.status(401).json({error: err.toString(), msg: 'Your authorization token is invalid.'})
+                    }
+                    if (decryptedID) {
+                        db.collection('users').findOne({Identity: decryptedID}, {_id: 0}, function(err, data) {
+                            if (!err && data) {
+                                req.User = data;
+                                next();
+                            } else {
+                                res.status(403).json({msg: 'Token accepted but user could not be found'})
+                            }
+                        });
+                    }
 
+                }
+            })
+        } else {
+            return res.status(401).json({error: 'Unauthorized', msg: 'You must provide an authorization token.'})
+
+        }
     }
+
 });
 
 

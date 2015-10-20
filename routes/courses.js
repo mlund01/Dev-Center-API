@@ -25,7 +25,7 @@ function requireField(field, body, errors) {
 
 router.get('/', function(req, res) {
     //Get Courses
-    db.collection('courses').find({}, {_id: 0}).toArray(function(err, data) {
+    db.collection('courses').find({CourseType: req.query.courseType}, {_id: 0}).toArray(function(err, data) {
         if (err) {
             log.err({collection: 'course', action: 'Get Courses', endpoint: '/courses', error: err});
             res.status(404).json(err);

@@ -23,7 +23,7 @@ router.get('/', function(req, res) {
 
 router.post('/oc-vars', function(req, res) {
   //Save OC Variable
-  if (!req.body) {
+  if (Underscore.isEmpty(req.body)) {
     res.status(406).json({error: 'request body is required'})
   } else if (!req.body.key) {
     res.status(406).json({error: "must provided 'key' in request body"});
@@ -89,7 +89,7 @@ router.patch('/oc-vars/:hash', function(req, res) {
       db.collection('users').updateOne({Identity: req.User.Identity, "Courses.OcVars.hash": req.params.hash}, {"$set": updateVals}, function(err, data) {
         if (err) {
           res.status(406).json({msg: 'Cannot update object at this time', error: err});
-        } else if (data.result.nModified == 0) {
+        } else if (data.result.n == 0) {
           res.status(406).json({error: 'Variable could not be found'});
         } else {
           res.status(204).send();
@@ -121,8 +121,40 @@ router.post('/progress/:classid', function(req, res) {
   })
 });
 
+
 router.get('/progress/courses/:courseid', function(req, res) {
   //Get Course Progress
+  db.collection('courses').findOne({ID: req.params.courseid}, {_id: 0, Classes: 1}, function(err, course) {
+    if (err) {
+      res.status(500).json({error: 'Could not process request at this time'});
+    } else if (!course) {
+      res.status(404).json({error: 'Could not find course'});
+    } else {
+      var returnData = {};
+      returnData.Meta = {};
+      returnData.CompletedClasses = [];
+      var completed = 0;
+      db.collection('users').findOne({Identity: req.User.Identity}, function(err, user) {
+        if (err) {
+          res.status(500).json({error: 'Could not process request at this time'});
+        } else if (!user) {
+          res.status(404).json({errror: "Could not find user"})
+        } else {
+          course.Classes.forEach(function(classid) {
+            if (user.Courses.Progress.Classes.indexOf(classid) > -1) {
+              returnData.CompletedClasses.push(classid);
+              completed += 1;
+            }
+          });
+          returnData.Meta.Count = completed;
+          returnData.Meta.TotalClasses = course.Classes.length;
+          returnData.Meta.PercentDone = completed / course.Classes.length;
+          returnData.Meta.PercentDone = returnData.Meta.PercentDone.toFixed(2);
+          res.status(200).json(returnData);
+        }
+      });
+    }
+  })
 });
 
 module.exports = router;

@@ -291,7 +291,8 @@ router.post('/create', function(err, req, res, next) {
                 Classes: req.body.Classes || [],
                 ImgUrl: req.body.ImgUrl || "assets/basics.png",
                 ListOrder: req.body.ListOrder || -1,
-                Active: req.body.Active || false
+                Active: req.body.Active || false,
+                Hide: false
             },
             function(err, response) {
                 if (err) {

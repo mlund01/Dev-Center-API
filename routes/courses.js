@@ -267,7 +267,42 @@ router.post('/:courseid/create-class', function(req, res) {
 
 });
 
-router.post('/create', function(err, req, res, next) {
+router.delete('/class/:classid/delete', function(req, res) {
+    //Delete class and add to archive
+    db.collection('courses').update({}, {"$pull": {Classes: req.params.classid}}, {multi: true}, function(err, data) {
+        if (err) {
+            res.status(500).json({error: 'could not remove class at this time'})
+        } else {
+            db.collection('classes').findOne({ID: req.params.classid}, {_id: 0}, function(err, data) {
+                if (err) {
+                    res.status(500).json({error: 'could not remove class at this time'})
+                } else if (data) {
+                    db.collection('classarchive').insertOne(data, function(err, data) {
+                        if (err) {
+                            res.status(500).json({error: 'could not remove class at this time'})
+                        } else {
+                            db.collection('classes').removeOne({ID: req.params.classid}, function(err, data) {
+                                if (err) {
+                                    db.collection('classarchive').removeOne({ID: req.params.classid}, function(err, data) {
+                                        if (err) {
+                                            res.status(500).json({error: 'class not removed but still added to class archive'})
+                                        }
+                                    })
+                                } else {
+                                    res.status(204).send();
+                                }
+                            })
+                        }
+                    })
+                } else {
+                    res.status(404).json({error: 'class not found'})
+                }
+            })
+        }
+    })
+});
+
+router.post('/course/create', function(err, req, res, next) {
     if (err) {
         return next(err);
     }
@@ -277,7 +312,6 @@ router.post('/create', function(err, req, res, next) {
     if (errors.length > 0) {
         res.status(406).json({error: 'Missing fields', msg: errors});
     } else if (req.body.CourseType != 'developer' || req.body.CourseType != 'business') {
-        console.log('hti');
         res.status(406).json({error: "'CourseType' must be set to 'developer' or 'business'"})
     } else {
         db.collection('courses').insertOne(
@@ -309,7 +343,7 @@ router.post('/create', function(err, req, res, next) {
     }
 
 });
-router.post('/:courseid/update', function(req, res) {
+router.post('/course/:courseid/update', function(req, res) {
     //Update Course
     if (req.body.ID != req.params.courseid) {
         res.statusCode = 406;
@@ -346,7 +380,7 @@ router.post('/:courseid/update', function(req, res) {
 
 });
 
-router.patch('/:courseid', function(req, res) {
+router.patch('/course/:courseid', function(req, res) {
     //Patch Course
     if (!req.body) {
         res.status(401).json({error: "request body is required"})
@@ -381,6 +415,28 @@ router.patch('/:courseid', function(req, res) {
             }
         });
     }
+});
+
+router.delete('course/:courseid/delete', function(req, res) {
+    db.collection('courses').findOne({ID: req.params.courseid}, {_id: 0}, function(err, data) {
+        if (err) {
+            res.status(500).json({error: 'could not remove course at this time'})
+        } else {
+            db.collection('coursearchive').insertOne(data, function(err, data) {
+                if (err) {
+                    res.status(500).json({error: 'could not remove class at this time'})
+                } else {
+                    db.collection('courses').removeOne({ID: req.params.courseid}, function(err, data) {
+                        if (err) {
+                            res.status(500).json({error: 'could not remove class at this time'})
+                        } else {
+                            res.status(204).send();
+                        }
+                    })
+                }
+            })
+        }
+    })
 });
 
 router.get('/checkIfIdExists/:courseid', function(req, res) {

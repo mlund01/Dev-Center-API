@@ -53,11 +53,13 @@ app.use('/courses', require('./routes/courses'));
 app.use('/users', require('./routes/users'));
 
 
+/*
 app.use(function(err, req, res, next) {
     console.log(err);
     res.status(500).json({error: err})
 
 });
+*/
 
 //app.use(require('./middleware/errorHandler'));
 

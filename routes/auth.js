@@ -3,13 +3,21 @@ var jwt = require('jsonwebtoken');
 var crypto = require('crypto');
 
 var algorithm = 'aes-256-ctr';
-var password = app.get('encryption_key_2');
+var password_1 = app.get('encryption_key_1');
+var password_2 = app.get('encryption_key_2');
 
 function decrypt(text){
-    var decipher = crypto.createDecipher(algorithm, password);
+    var decipher = crypto.createDecipher(algorithm, password_2);
     var dec = decipher.update(text,'hex','utf8');
     dec += decipher.final('utf8');
     return dec;
+}
+
+function encrypt(text){
+    var cipher = crypto.createCipher(algorithm, password_1);
+    var crypted = cipher.update(text,'utf8','hex');
+    crypted += cipher.final('hex');
+    return crypted;
 }
 
 
@@ -19,7 +27,8 @@ router.post('/', function(req, res) {
         res.status(400).json({error: "Identity value is required"})
     }
     else {
-        var crypIdentity = decrypt(req.query.UserHash);
+        var decrypted = decrypt(req.query.UserHash);
+        var crypIdentity = encrypt(decrypted);
         db.collection('users').findOne({Identity: crypIdentity},
             function(err, data ){
                 if (data) {

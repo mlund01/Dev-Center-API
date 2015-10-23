@@ -2,13 +2,21 @@ var router = require('express').Router();
 var jwt = require('jsonwebtoken');
 var crypto = require('crypto');
 var algorithm = 'aes-256-ctr';
-var password = app.get('encryption_key_2');
+var password_1 = app.get('encryption_key_1');
+var password_2 = app.get('encryption_key_2');
 
 function decrypt(text){
-    var decipher = crypto.createDecipher(algorithm, password);
+    var decipher = crypto.createDecipher(algorithm, password_2);
     var dec = decipher.update(text,'hex','utf8');
     dec += decipher.final('utf8');
     return dec;
+}
+
+function encrypt(text){
+    var cipher = crypto.createCipher(algorithm, password_1);
+    var crypted = cipher.update(text,'utf8','hex');
+    crypted += cipher.final('hex');
+    return crypted;
 }
 
 router.use(function(req, res, next) {
@@ -17,31 +25,40 @@ router.use(function(req, res, next) {
     } else {
         var token = req.headers['dc-token'];
         if (token) {
-            jwt.verify(token, app.get('secret_key'), function(err, decoded) {
-                if (err) {
-                    return res.status(401).json({error: 'Unauthorized', msg: 'Your authorization token is invalid'})
-                } else {
-                    try {
-                        var decryptedID = decrypt(decoded);
-                    } catch(err) {
-                        res.status(401).json({error: err.toString(), msg: 'Your authorization token is invalid.'})
-                    }
-                    if (decryptedID) {
-                        db.collection('users').findOne({Identity: decryptedID}, {_id: 0}, function(err, data) {
-                            if (!err && data) {
-                                req.User = data;
-                                next();
-                            } else {
-                                res.status(403).json({msg: 'Token accepted but user could not be found'})
-                            }
-                        });
-                    }
+            if (req.originalUrl == '/admin/registeruser') {
+                req.AccessGranted = false;
+                next();
+            } else {
+                jwt.verify(token, app.get('secret_key'), function(err, decoded) {
+                    if (err) {
+                        req.AccessGranted = false;
+                        next();
+                    } else {
+                        try {
+                            var decryptedID = decrypt(decoded);
+                            var id = encrypt(decryptedID);
+                        } catch(err) {
+                            req.AccessGranted = false;
+                            next();
+                        }
+                        if (decryptedID) {
+                            db.collection('users').findOne({Identity: id}, {_id: 0}, function(err, data) {
+                                if (!err && data) {
+                                    req.AccessGranted = true;
+                                    req.User = data;
+                                    next();
+                                } else {
+                                    res.status(406).json({msg: 'Token accepted but user could not be found'})
+                                }
+                            });
+                        }
 
-                }
-            })
+                    }
+                })
+            }
         } else {
-            return res.status(401).json({error: 'Unauthorized', msg: 'You must provide an authorization token.'})
-
+            req.AccessGranted = false;
+            next();
         }
     }
 

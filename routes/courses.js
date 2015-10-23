@@ -9,9 +9,15 @@ var Chance = require('chance');
 var chance = new Chance();
 
 
+
+router.use(function(req, res, next) {
+    if (req.AccessGranted) {
+        next();
+    } else {
+        res.status(403).json({error: 'Access has been denied for this request'})
+    }
+});
 //NON-ADMIN ENDPOINTS
-
-
 function requireFields(fields, body) {
     var errors = [];
     fields.forEach(function(field) {
@@ -266,6 +272,42 @@ router.post('/:courseid/create-class', function(req, res) {
     }
 
 });
+router.patch('/class/:classid', function(req, res) {
+    //Patch Class
+    if (!req.body) {
+        res.status(401).json({error: "request body is required"})
+    }
+    else {
+        var modObj = {};
+        var oldKeys = [];
+        db.collection('classes').findOne({ID: req.params.classid}, function(err, data) {
+            if (err) {
+                res.status(500).json({error: "system error", mongoError: err})
+            } else if (!data) {
+                res.status(404).json({error: req.params.classid + ' not found'})
+            } else {
+                for (var key in data) {
+                    oldKeys.push(key);
+                }
+                for (var newKey in req.body) {
+                    if (oldKeys.indexOf(newKey) > -1) {
+                        modObj[newKey] = req.body[newKey];
+                    }
+                }
+
+                db.collection('classes').updateOne({ID: req.params.classid}, {"$set": modObj}, function(err, data) {
+                    if (err) {
+                        res.status(500).json({error: 'class could not be updated'})
+                    } else if (data.result.nModified == 0) {
+                        res.status(404).json({error: req.params.classid + ' not found'})
+                    } else {
+                        res.status(204).send();
+                    }
+                })
+            }
+        });
+    }
+});
 
 router.delete('/class/:classid/delete', function(req, res) {
     //Delete class and add to archive
@@ -405,7 +447,7 @@ router.patch('/course/:courseid', function(req, res) {
 
                 db.collection('courses').updateOne({ID: req.params.courseid}, {"$set": modObj}, function(err, data) {
                     if (err) {
-                        res.status(500).json({error: 'class could not be updated'})
+                        res.status(500).json({error: 'course could not be updated'})
                     } else if (data.result.nModified == 0) {
                         res.status(404).json({error: req.params.courseid + ' not found'})
                     } else {
@@ -418,6 +460,7 @@ router.patch('/course/:courseid', function(req, res) {
 });
 
 router.delete('course/:courseid/delete', function(req, res) {
+    //Delete Course
     db.collection('courses').findOne({ID: req.params.courseid}, {_id: 0}, function(err, data) {
         if (err) {
             res.status(500).json({error: 'could not remove course at this time'})

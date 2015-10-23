@@ -6,9 +6,13 @@ var Chance = require('chance');
 var chance = new Chance();
 
 
-function verifyKeys(key, errors) {
-
-}
+router.use(function(req, res, next) {
+  if (req.AccessGranted) {
+    next();
+  } else {
+    res.status(403).json({error: 'Access has been denied for this request'})
+  }
+});
 
 router.get('/', function(req, res) {
   //Get User
@@ -51,8 +55,26 @@ router.get('/oc-vars', function(req, res) {
   db.collection('users').findOne({Identity: req.User.Identity}, function(err, data) {
     if (err) {
       res.status(500).json({msg: 'Could not get variables', error: err})
-    } else {
-      res.status(200).json(data.Courses.OcVars);
+    } else if (!data) {
+      res.status(404).json({msg: 'User Not Found'});
+    }
+    else
+     {
+       if (data.Courses && data.Courses.OcVars) {
+           res.status(200).json(data.Courses.OcVars);
+       } else {
+         db.collection('users').updateOne({Identity: req.User.Identity}, {"$set": {"Courses.OcVars": []}}, function(err, data) {
+           if (err) {
+             res.status(500).json({error: err})
+           } else if (data.result.nModified == 0) {
+             res.status(404).json({error: 'user not found'})
+           } else {
+             res.status(200).json([]);
+           }
+
+         })
+       }
+
     }
   })
 });
@@ -140,17 +162,31 @@ router.get('/progress/courses/:courseid', function(req, res) {
         } else if (!user) {
           res.status(404).json({errror: "Could not find user"})
         } else {
-          course.Classes.forEach(function(classid) {
-            if (user.Courses.Progress.Classes.indexOf(classid) > -1) {
-              returnData.CompletedClasses.push(classid);
-              completed += 1;
-            }
-          });
-          returnData.Meta.Count = completed;
-          returnData.Meta.TotalClasses = course.Classes.length;
-          returnData.Meta.PercentDone = completed / course.Classes.length;
-          returnData.Meta.PercentDone = returnData.Meta.PercentDone.toFixed(2);
-          res.status(200).json(returnData);
+          if (user.Courses && user.Courses.Progress && user.Courses.Progress.Classes) {
+            course.Classes.forEach(function(classid) {
+              if (user.Courses.Progress.Classes.indexOf(classid) > -1) {
+                returnData.CompletedClasses.push(classid);
+                completed += 1;
+              }
+            });
+            returnData.Meta.Count = completed;
+            returnData.Meta.TotalClasses = course.Classes.length;
+            returnData.Meta.PercentDone = completed / course.Classes.length;
+            returnData.Meta.PercentDone = returnData.Meta.PercentDone.toFixed(2);
+            res.status(200).json(returnData);
+          } else {
+            db.collection('users').updateOne({Identity: user.Identity}, {"$set": {"Courses.Progress.Classes": []}}, function(err, data) {
+              if (err) {
+                res.status(500).json({error: err});
+              } else if (data.result.nModified == 0) {
+                res.status(404).json({error: 'user not found'})
+              } else {
+                res.status(200).json({Meta: {Count: 0, TotalClasses: course.Classes.length, PercentDone: 0}, CompletedClasses: []})
+              }
+            })
+          }
+
+
         }
       });
     }

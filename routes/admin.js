@@ -20,14 +20,7 @@ function decrypt(text, pass){
     return dec;
 }
 
-router.use(function(req, res, next) {
-    if (req.User.Admin) {
-        next();
-    } else {
-        console.log(req.User.Admin);
-        res.status(405).json({error: 'Must be an Admin User to Make Requests in ' + req.baseUrl})
-    }
-});
+
 
 router.post('/registeruser', function(req, res) {
     if (req.body.Email || req.body.Username) {
@@ -38,15 +31,17 @@ router.post('/registeruser', function(req, res) {
             } else {
                 var newUser = {
                     Identity: hash,
-                    Admin: req.body.Admin || false
+                    Admin: false,
+                    Username: req.body.Username,
+                    Email: req.body.Email
                 };
                 db.collection('users').insertOne(
                     newUser,
                     function(err, data) {
                         if (!err) {
-                            db.collection('users').findOne({Identity: hash}, {_id: 0}, function(err, data) {
+                            db.collection('users').findOne({Identity: hash}, {_id: 0, Admin: 0}, function(err, data) {
                                 if (!err) {
-                                    data.UserHash = encrypt(data.Identity, password_2);
+                                    data.UserHash = encrypt("{Email: " + (req.body.Email || null) + ", Username: " + (req.body.UserName || null) + "}", password_2);
                                     delete data.Identity;
                                     res.status(200).json(data);
                                 } else {
@@ -65,19 +60,52 @@ router.post('/registeruser', function(req, res) {
     }
 });
 
-router.get('/getuseridentity', function(req, res) {
+router.use(function(req, res, next) {
+    if (req.AccessGranted) {
+        next();
+    } else {
+        res.status(403).json({error: 'Access has been denied for this request'})
+    }
+});
 
+router.use(function(req, res, next) {
+    if (req.User.Admin) {
+        next();
+    } else {
+        res.status(403).json({error: 'Must be an Admin User to Make Requests in ' + req.baseUrl})
+    }
+});
+
+
+router.get('/getuseridentity', function(req, res) {
+    if (!req.query.UserHash) {
+        res.status(406).json({error: 'Must provided user hash as query param'})
+    } else {
+        var id = decrypt(req.query.UserHash, password_2);
+        id = encrypt(id, password_1);
+        db.collection('users').findOne({Identity: id}, {_id: 0, Identity: 1}, function(err, data) {
+            if (err) {
+                res.status(500).json({error: "Could not complete request at this time"})
+            } else if (!data) {
+                res.status(404).json({error: "User not found"})
+            } else {
+                res.status(200).json(data);
+            }
+        })
+    }
 });
 
 router.get('/getuserhash', function(req, res) {
     if (req.query.Email || req.query.Username) {
-        var hash1 = encrypt("{Email: " + (req.query.Email || null) + ", Username: " + null + "}", password_1);
-        var hash2 = encrypt("{Email: " + null + ", Username: " + (req.query.UserName || null) + "}", password_1);
-        var hash3 = encrypt("{Email: " + (req.query.Email || null) + ", Username: " + (req.query.UserName || null) + "}", password_1);
+        var id1 = encrypt("{Email: " + (req.query.Email || null) + ", Username: " + null + "}", password_1);
+        var id2 = encrypt("{Email: " + null + ", Username: " + (req.query.UserName || null) + "}", password_1);
+        var id3 = encrypt("{Email: " + (req.query.Email || null) + ", Username: " + (req.query.UserName || null) + "}", password_1);
 
-        db.collection('users').findOne({Identity: {"$in": [hash1, hash2, hash3]}}, function(err, data) {
-            if (data) {
-                res.status(200).json({UserHash: encrypt(data.Identity, password_2)})
+        db.collection('users').findOne({Identity: {"$in": [id1, id2, id3]}}, function(err, data) {
+            if (err) {
+                res.status(500).json({error: err});
+            } else if (data) {
+                res.status(200).json({UserHash: encrypt(decrypt(data.Identity, password_1), password_2)})
             } else {
                 res.status(404).json({error: 'User Not Found'})
             }
@@ -88,7 +116,7 @@ router.get('/getuserhash', function(req, res) {
     }
 });
 
-router.post('/updateuser', function(req, res) {
+/*router.post('/updateuser', function(req, res) {
     if (req.body.Email || req.body.Username) {
         var hash = encrypt("{Email: " + (req.body.Email || null) + ", Username: " + (req.body.UserName || null) + "}", password_1);
         try {
@@ -124,7 +152,7 @@ router.post('/updateuser', function(req, res) {
     } else {
         res.status(405).json({error: "Must provide either 'Email' or 'Username'"})
     }
-});
+});*/
 
 router.delete('/deleteUser', function(req, res) {
 

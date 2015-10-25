@@ -16,7 +16,7 @@ router.use(function(req, res, next) {
 
 router.get('/', function(req, res) {
   //Get User
-  db.collection('users').findOne({Identity: req.User.Identity}, {Identity: 0, _id: 0}, function(err, data) {
+  db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, {Identity: 0, _id: 0}, function(err, data) {
     if (err) {
       res.status(500).json({msg: 'Could not process request', error: err});
     } else {
@@ -37,7 +37,7 @@ router.post('/oc-vars', function(req, res) {
   else
    {
 
-    db.collection('users').updateOne({Identity: req.User.Identity}, {"$push": {"Courses.OcVars": {key: req.body.key, val: req.body.val, hash: chance.hash({length: 15})}}}, function(err, data) {
+    db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$push": {"Courses.OcVars": {key: req.body.key, val: req.body.val, hash: chance.hash({length: 15})}}}, function(err, data) {
       if (err) {
         res.status(500).json({msg: 'could not add value', error: err});
       } else if (data.result.nModified == 0){
@@ -52,7 +52,7 @@ router.post('/oc-vars', function(req, res) {
 
 router.get('/oc-vars', function(req, res) {
   //Get OC Variable
-  db.collection('users').findOne({Identity: req.User.Identity}, function(err, data) {
+  db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, data) {
     if (err) {
       res.status(500).json({msg: 'Could not get variables', error: err})
     } else if (!data) {
@@ -63,7 +63,7 @@ router.get('/oc-vars', function(req, res) {
        if (data.Courses && data.Courses.OcVars) {
            res.status(200).json(data.Courses.OcVars);
        } else {
-         db.collection('users').updateOne({Identity: req.User.Identity}, {"$set": {"Courses.OcVars": []}}, function(err, data) {
+         db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$set": {"Courses.OcVars": []}}, function(err, data) {
            if (err) {
              res.status(500).json({error: err})
            } else if (data.result.nModified == 0) {
@@ -81,7 +81,7 @@ router.get('/oc-vars', function(req, res) {
 
 router.delete('/oc-vars/:hash', function(req, res) {
   //Delete OC Variable
-  db.collection('users').updateOne({Identity: req.User.Identity}, {"$pull": {"Courses.OcVars": {"hash": req.params.hash}}}, function(err, data) {
+  db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$pull": {"Courses.OcVars": {"hash": req.params.hash}}}, function(err, data) {
     if (err) {
       res.status(500).json({msg: 'could not delete', error: err});
     } else if (data.result.nModified == 0){
@@ -108,7 +108,7 @@ router.patch('/oc-vars/:hash', function(req, res) {
     if (Underscore.isEmpty(updateVals)) {
       res.status(406).json({error: "Must provided either 'key' or 'val' in request body to update"})
     } else {
-      db.collection('users').updateOne({Identity: req.User.Identity, "Courses.OcVars.hash": req.params.hash}, {"$set": updateVals}, function(err, data) {
+      db.collection(req.UserEnv).updateOne({Identity: req.User.Identity, "Courses.OcVars.hash": req.params.hash}, {"$set": updateVals}, function(err, data) {
         if (err) {
           res.status(406).json({msg: 'Cannot update object at this time', error: err});
         } else if (data.result.n == 0) {
@@ -130,7 +130,7 @@ router.post('/progress/:classid', function(req, res) {
     } else if (!data) {
       res.status(404).json({error: req.params.classid + " class does not exist"});
     } else {
-      db.collection('users').updateOne({Identity: req.User.Identity}, {"$addToSet": {"Courses.Progress.Classes": req.params.classid}}, function(err, data) {
+      db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$addToSet": {"Courses.Progress.Classes": req.params.classid}}, function(err, data) {
         if (err) {
           res.status(500).json({msg: 'could not add classid to user object', error: err});
         } else if (data.result.nModified == 0) {
@@ -156,7 +156,7 @@ router.get('/progress/courses/:courseid', function(req, res) {
       returnData.Meta = {};
       returnData.CompletedClasses = [];
       var completed = 0;
-      db.collection('users').findOne({Identity: req.User.Identity}, function(err, user) {
+      db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, user) {
         if (err) {
           res.status(500).json({error: 'Could not process request at this time'});
         } else if (!user) {
@@ -175,7 +175,7 @@ router.get('/progress/courses/:courseid', function(req, res) {
             returnData.Meta.PercentDone = returnData.Meta.PercentDone.toFixed(2);
             res.status(200).json(returnData);
           } else {
-            db.collection('users').updateOne({Identity: user.Identity}, {"$set": {"Courses.Progress.Classes": []}}, function(err, data) {
+            db.collection(req.UserEnv).updateOne({Identity: user.Identity}, {"$set": {"Courses.Progress.Classes": []}}, function(err, data) {
               if (err) {
                 res.status(500).json({error: err});
               } else if (data.result.nModified == 0) {

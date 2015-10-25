@@ -24,12 +24,12 @@ function encrypt(text){
 
 router.post('/', function(req, res) {
     if (!req.query.UserHash) {
-        res.status(400).json({error: "Identity value is required"})
+        res.status(400).json({error: "UserHash value is required in params"})
     }
     else {
         var decrypted = decrypt(req.query.UserHash);
         var crypIdentity = encrypt(decrypted);
-        db.collection('users').findOne({Identity: crypIdentity},
+        db.collection(req.UserEnv).findOne({Identity: crypIdentity},
             function(err, data ){
                 if (data) {
                     var token = jwt.sign(req.query.UserHash, app.get('secret_key'), {

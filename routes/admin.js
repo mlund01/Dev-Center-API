@@ -25,7 +25,7 @@ function decrypt(text, pass){
 router.post('/registeruser', function(req, res) {
     if (req.body.Email || req.body.Username) {
         var hash = encrypt("{Email: " + (req.body.Email || null) + ", Username: " + (req.body.UserName || null) + "}", password_1);
-        db.collection('users').findOne({Identity: hash}, function(err, data) {
+        db.collection(req.UserEnv).findOne({Identity: hash}, function(err, data) {
             if (data) {
                 res.status(401).json({error: 'User already exists'})
             } else {
@@ -35,11 +35,11 @@ router.post('/registeruser', function(req, res) {
                     Username: req.body.Username,
                     Email: req.body.Email
                 };
-                db.collection('users').insertOne(
+                db.collection(req.UserEnv).insertOne(
                     newUser,
                     function(err, data) {
                         if (!err) {
-                            db.collection('users').findOne({Identity: hash}, {_id: 0, Admin: 0}, function(err, data) {
+                            db.collection(req.UserEnv).findOne({Identity: hash}, {_id: 0, Admin: 0}, function(err, data) {
                                 if (!err) {
                                     data.UserHash = encrypt("{Email: " + (req.body.Email || null) + ", Username: " + (req.body.UserName || null) + "}", password_2);
                                     delete data.Identity;
@@ -83,7 +83,7 @@ router.get('/getuseridentity', function(req, res) {
     } else {
         var id = decrypt(req.query.UserHash, password_2);
         id = encrypt(id, password_1);
-        db.collection('users').findOne({Identity: id}, {_id: 0, Identity: 1}, function(err, data) {
+        db.collection(req.UserEnv).findOne({Identity: id}, {_id: 0, Identity: 1}, function(err, data) {
             if (err) {
                 res.status(500).json({error: "Could not complete request at this time"})
             } else if (!data) {
@@ -101,7 +101,7 @@ router.get('/getuserhash', function(req, res) {
         var id2 = encrypt("{Email: " + null + ", Username: " + (req.query.UserName || null) + "}", password_1);
         var id3 = encrypt("{Email: " + (req.query.Email || null) + ", Username: " + (req.query.UserName || null) + "}", password_1);
 
-        db.collection('users').findOne({Identity: {"$in": [id1, id2, id3]}}, function(err, data) {
+        db.collection(req.UserEnv).findOne({Identity: {"$in": [id1, id2, id3]}}, function(err, data) {
             if (err) {
                 res.status(500).json({error: err});
             } else if (data) {
@@ -125,7 +125,7 @@ router.get('/getuserhash', function(req, res) {
             res.status(405).json({msg: 'Incorrect Identity token or Identity token not provided', error: e.toString()})
         }
         if (id) {
-            db.collection('users').replaceOne({Identity: id},
+            db.collection(req.UserEnv).replaceOne({Identity: id},
                 {
                     Identity: hash,
                     Admin: req.body.Admin || false
@@ -136,7 +136,7 @@ router.get('/getuserhash', function(req, res) {
                     } else if (data.result.nModified == 0) {
                         res.status(404).json({error: "User not found"});
                     } else {
-                        db.collection('users').findOne({Identity: hash}, {_id: 0}, function(err, data) {
+                        db.collection(req.UserEnv).findOne({Identity: hash}, {_id: 0}, function(err, data) {
                             if (!err) {
                                 data.UserHash = encrypt(data.Identity, password_2);
                                 delete data.Identity;

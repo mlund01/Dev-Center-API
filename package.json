@@ -25,6 +25,7 @@
     "express": "~4.13.1",
     "jade": "~1.11.0",
     "jsonwebtoken": "^5.4.0",
+    "keen-js": "^3.2.7",
     "le_node": "^1.1.0",
     "mongodb": "^2.0.45",
     "mongojs": "^1.4.0",

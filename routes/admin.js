@@ -2,6 +2,7 @@ var router = require('express').Router();
 var jwt = require('jsonwebtoken');
 var crypto = require('crypto');
 
+
 var algorithm = 'aes-256-ctr';
 var password_1 = app.get('encryption_key_1');
 var password_2 = app.get('encryption_key_2');
@@ -23,17 +24,40 @@ function decrypt(text, pass){
 
 
 router.post('/registeruser', function(req, res) {
+
+    function registerEvent(Pass, Msg) {
+        var eventObj = {
+            Username: req.body.Username,
+            Email: req.body.Email,
+            FirstName: req.body.FirstName,
+            LastName: req.body.LastName,
+            Pass: Pass,
+            Message: Msg | null
+        };
+        keen.addEvent("registration", eventObj, function(err, res) {
+            if (err) {
+                console.log("could not log registration event");
+            } else if (res.created) {
+                console.log("registation event successfully logged");
+            }
+        })
+    }
+
+
     if (req.body.Email || req.body.Username) {
         var hash = encrypt("{Email: " + (req.body.Email || null) + ", Username: " + (req.body.UserName || null) + "}", password_1);
         db.collection(req.UserEnv).findOne({Identity: hash}, function(err, data) {
             if (data) {
-                res.status(401).json({error: 'User already exists'})
+                res.status(401).json({error: 'User already exists'});
+                registerEvent(false, "User already exists");
             } else {
                 var newUser = {
                     Identity: hash,
                     Admin: false,
                     Username: req.body.Username,
-                    Email: req.body.Email
+                    Email: req.body.Email,
+                    FirstName: req.body.FirstName | null,
+                    LastName: req.body.LastName | null
                 };
                 db.collection(req.UserEnv).insertOne(
                     newUser,
@@ -44,19 +68,23 @@ router.post('/registeruser', function(req, res) {
                                     data.UserHash = encrypt("{Email: " + (req.body.Email || null) + ", Username: " + (req.body.UserName || null) + "}", password_2);
                                     delete data.Identity;
                                     res.status(200).json(data);
+                                    registerEvent(true);
                                 } else {
-                                    res.status(401).json({error: 'User made but could not be fetched'})
+                                    res.status(401).json({error: 'User made but could not be fetched'});
+                                    registerEvent(false, "User made but could not be fetched");
                                 }
                             });
                         } else {
-                            res.status(401).json({error: 'Could Not Create New User', mongoError: err})
+                            res.status(401).json({error: 'Could Not Create New User', mongoError: err});
+                            registerEvent(false, "mongo error on create user");
                         }
                     })
             }
         });
 
     } else {
-        res.status(401).json({error: "Must provide 'Email' or 'UserName'"})
+        res.status(401).json({error: "Must provide 'Email' or 'UserName'"});
+        registerEvent(false, "mongo error on find user");
     }
 });
 

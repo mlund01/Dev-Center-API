@@ -10,6 +10,8 @@ var chance = new Chance();
 
 
 
+
+
 router.use(function(req, res, next) {
     if (req.AccessGranted) {
         next();
@@ -175,6 +177,13 @@ router.use(function(req, res, next) {
 });
 
 
+function copyToClassArchive(classObj) {
+    classObj.ModifiedOn = Date.now();
+    classObj.CreatedBy = req.User.Username;
+    db.collection('class_archive').insertOne(classObj);
+}
+
+
 router.post('/:courseid/classes/:classid', function(req, res) {
     //Update Class
     if (req.body.ID != req.params.classid) {
@@ -184,31 +193,172 @@ router.post('/:courseid/classes/:classid', function(req, res) {
         if (req.body.CourseOrder) {
             delete req.body.CourseOrder;
         }
-        db.collection('classes').replaceOne(
-            {ID: req.params.classid},
-            req.body,
-            function(err, result) {
-                if (result) {
-                    if (result.result.nModified == 0) {
-                        res.statusCode = 404;
-                        res.send('classid not found')
-                    } else {
-                        if (err) {
-                            res.statusCode = 400;
-                            res.send(err);
+        db.collection('classes').findOne({ID: req.params.classid}, {_ID: 0}, function(err, data) {
+            if (err) {
+                res.statusCode(500).json({msg: 'Could not copy class, class not updated', error: err})
+            } else if (!data) {
+                res.statusCode(404).json({msg: 'class not found'})
+            } else {
+                copyToClassArchive(data);
+                db.collection('classes').replaceOne(
+                    {ID: req.params.classid},
+                    req.body,
+                    function(err, result) {
+                        if (result) {
+                            if (result.result.nModified == 0) {
+                                res.statusCode = 404;
+                                res.send('classid not found')
+                            } else {
+                                if (err) {
+                                    res.statusCode = 400;
+                                    res.send(err);
+                                } else {
+                                    res.statusCode = 204;
+                                    res.send();
+                                }
+                            }
                         } else {
-                            res.statusCode = 204;
-                            res.send();
+                            res.statusCode = 404;
+                            res.end('class not found');
                         }
                     }
+                )
+            }
+        })
+
+    }
+
+});
+
+router.post('/:courseid/classes/:classid/copy', function(req, res) {
+    //Copy Existing Class into Staging
+    db.collection('classes').findOne({ID: req.params.classid}, {_id: 0}, function(err, data) {
+        if (err) {
+            res.status(500).json({error: 'cannot copy class at this time'});
+        } else if (!data) {
+            res.status(404).json({error: 'cannot find class'})
+        } else {
+            db.collection('staged_classes').insertOne(data, function(err, data) {
+                if (err) {
+                    res.status(500).json({error: 'cannot copy class at this time'});
+                } else if (data.result.nInserted == 0) {
+                    res.status(500).json({error: 'cannot copy class at this time'});
                 } else {
-                    res.statusCode = 404;
-                    res.end('class not found');
+                    db.collection('classes').updateOne({ID: req.params.classid}, {"$set": {InStaging: true}}, function(err, result) {
+                        if (err) {
+                            res.status(500).json({msg: 'class copied but "InStaging" value not updated in courses'})
+                        } else if (!result.result.nModified == 0) {
+                            res.status(404).json({msg: 'class added to staging but not found in "classes" collection'})
+                        } else {
+                            res.status(204).send();
+                        }
+                    });
+
+                }
+            })
+        }
+    })
+});
+
+router.post('/:courseid/staged-classes/:classid', function(req, res) {
+    //Update Staged Class
+    if (req.body.ID != req.params.classid) {
+        res.statusCode = 406;
+        res.end('"ID" in request body must match "classid" parameter value');
+    } else {
+        if (req.body.CourseOrder) {
+            delete req.body.CourseOrder;
+        }
+        db.collection('staged_classes').findOne(
+            {ID: req.params.classid},
+            {_id: 0},
+            function(err, data) {
+                if (err) {
+                    req.statusCode(500).json({msg: 'could not make copy of class', error: err})
+                } else if (!data) {
+                    req.statusCode(404).json({msg: 'Class not found in staging'})
+                } else {
+                    db.collection('staged_classes').replaceOne(
+                        {ID: req.params.classid},
+                        req.body,
+                        function(err, result) {
+                            if (result) {
+                                if (result.result.nModified == 0) {
+                                    res.statusCode = 404;
+                                    res.send('classid not found')
+                                } else {
+                                    if (err) {
+                                        res.statusCode = 400;
+                                        res.send(err);
+                                    } else {
+                                        res.statusCode = 204;
+                                        res.send();
+                                    }
+                                }
+                            } else {
+                                res.statusCode = 404;
+                                res.end('class not found');
+                            }
+                        }
+                    )
                 }
             }
         )
-    }
 
+    }
+});
+
+router.post('/:courseid/staged-classes/:classid/replace', function(req, res) {
+    //Replace real class with Staged Class
+    if (req.body.ID != req.params.classid) {
+        res.statusCode = 406;
+        res.end('"ID" in request body must match "classid" parameter value');
+    } else {
+        if (req.body.CourseOrder) {
+            delete req.body.CourseOrder;
+        }
+        db.collection('staged_classes').findOne(
+            {ID: req.params.classid},
+            {_id: 0},
+            function(err, data) {
+                if (err) {
+                    res.statusCode(500).json({msg: 'could not make copy of class', error: err})
+                } else if (!data) {
+                    res.statusCode(404).json({msg: 'Class not found in staging'})
+                } else {
+                    db.collection('classes').findOne({ID: req.params.classid}, {_id: 0}, function(err, oldClass) {
+                        if (err) {
+                            res.status(500).json({msg: 'Server Error', error: err})
+                        } else if (!oldClass) {
+                            res.status(404).json({msg: 'Class not found in classes collection'})
+                        } else {
+                            copyToClassArchive(oldClass);
+                            data.IsStaging = false;
+                            db.collection('classes').replaceOne({ID: req.params.classid}, data, function(err, data2) {
+                                if (err) {
+                                    res.statusCode(500).json({msg: 'Server Error', error: err})
+                                } else if (data2.result.nModified == 0) {
+                                    res.statusCode(404).json({msg: 'Class not found in classes collection'})
+                                } else {
+                                    db.collection('staged_classes').removeOne({ID: req.params.classid}, function(err, data3) {
+                                        if (err) {
+                                            res.statusCode(500).json({msg: 'class replaced but not removed from staging', error: err})
+                                        } else if (data3.result.nModified == 0) {
+                                            res.statusCode(404).json({msg: 'class replaced but could not be found to replace in staging'})
+                                        } else {
+                                            res.statusCode(204).send();
+                                        }
+                                    })
+                                }
+                            })
+                        }
+                    })
+
+                }
+            }
+        )
+
+    }
 });
 
 router.post('/:courseid/create-class', function(req, res) {

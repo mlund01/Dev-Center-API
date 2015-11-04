@@ -34,8 +34,12 @@ router.use(function(req, res, next) {
     } else if (req.headers.environment == 'production') {
         req.UserEnv = 'users';
         next();
-    } else {
-        res.status(403).json({error: '"Environment" Header must be set to "test" or "production"'})
+    } else if (req.headers.environment == 'qa') {
+        req.UserEnv = 'qausers';
+        next()
+    }
+    else {
+        res.status(403).json({error: '"Environment" Header must be set to "test", "qa", or "production"'})
     }
 
 });

@@ -21,10 +21,20 @@ function decrypt(text, pass){
     return dec;
 }
 
-router.post('/kyle_test', function(req, res) {
+router.post('/kyletest', function(req, res) {
+    if (req.query.MongoDBHash) {
+        var decrypted = decrypt(req.query.MongoDBHash, password_1);
+        res.status(200).json({value: decrypted});
+    } else {
+        res.status(403).json({msg: 'must provided "MongoDBHash" in query params'})
+    }
 
-    var decrypted = decrypt(req.query.MongoDBHash, password_1);
-    res.status(200).json({value: decrypted});
+});
+
+router.post('/maxtest', function(req, res) {
+    var obj = '{Username: "MaxLund", Email: "lundmax@gmail.com", ID: 1}';
+    var encryption = encrypt(obj, password_1);
+    res.status(200).json({value: encryption});
 });
 
 router.post('/registeruser', function(req, res) {

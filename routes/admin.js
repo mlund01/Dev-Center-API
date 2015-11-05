@@ -21,7 +21,11 @@ function decrypt(text, pass){
     return dec;
 }
 
+router.post('/kyle_test', function(req, res) {
 
+    var decrypted = decrypt(req.query.MongoDBHash, password_1);
+    res.status(200).json({value: decrypted});
+});
 
 router.post('/registeruser', function(req, res) {
 

@@ -17,7 +17,7 @@ function encrypt(text, pass){
 function decrypt(text, pass){
     var decipher = crypto.createDecipher(algorithm, pass);
     var dec = decipher.update(text,'base64','utf8');
-    dec += decipher.final('base64');
+    dec += decipher.final('utf8');
     return dec;
 }
 

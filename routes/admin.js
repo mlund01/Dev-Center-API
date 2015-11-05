@@ -9,15 +9,15 @@ var password_2 = app.get('encryption_key_2');
 
 function encrypt(text, pass){
     var cipher = crypto.createCipher(algorithm, pass);
-    var crypted = cipher.update(text,'utf8','hex');
-    crypted += cipher.final('hex');
+    var crypted = cipher.update(text,'utf8','base64');
+    crypted += cipher.final('base64');
     return crypted;
 }
 
 function decrypt(text, pass){
     var decipher = crypto.createDecipher(algorithm, pass);
-    var dec = decipher.update(text,'hex','utf8');
-    dec += decipher.final('utf8');
+    var dec = decipher.update(text,'base64','utf8');
+    dec += decipher.final('base64');
     return dec;
 }
 

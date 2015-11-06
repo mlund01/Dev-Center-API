@@ -19,6 +19,9 @@ router.use(function(req, res, next) {
     } else if (req.headers.environment == 'qa') {
         req.UserEnv = 'qausers';
         next()
+    } else if (req.headers.environment == 'local') {
+        req.UserEnv = 'localusers';
+        next()
     }
     else {
         res.status(403).json({error: '"Environment" Header must be set to "test", "qa", or "production"'})

@@ -43,7 +43,6 @@ function start() {
 
     app.set('secret_key', process.env.SECRET_KEY || localConfig.env.SECRET_KEY);
     app.set('encryption_key_1', process.env.CRYPTO_KEY_1 || localConfig.env.CRYPTO_KEY_1);
-    app.set('encryption_key_2', process.env.CRYPTO_KEY_2 || localConfig.env.CRYPTO_KEY_2);
     app.set('encryption_iv', localConfig.env.CRYPTO_IV);
     app.use(bodyParser.json());
 

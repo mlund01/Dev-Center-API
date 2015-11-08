@@ -193,4 +193,37 @@ router.get('/progress/courses/:courseid', function(req, res) {
   })
 });
 
+router.post('/saved-states/context', function(req, res) {
+  //set ClientID State
+  if (!req.body) {
+    res.status(406).json({msg: 'must provide request body'})
+  } else {
+    db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$set": {"Courses.State.Context": req.body}}, function(err, data) {
+      if (err) {
+        res.status(500).json({msg: 'could not set Context at this time', error: err})
+      }else {
+        res.status(204).send();
+      }
+    })
+  }
+});
+
+router.get('/saved-states/context', function(req, res) {
+  //set ClientID State
+  db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, data) {
+    if (err) {
+      res.status(500).json({msg: 'could not find Context at this time', error: err})
+    } else if (!data) {
+      res.status(404).json({msg: 'could not find user'})
+    } else {
+      if (data.Courses && data.Courses.State && data.Courses.State.Context) {
+        res.status(200).json(data.Courses.State.Context);
+      } else {
+        res.status(200).json({});
+      }
+
+    }
+  })
+});
+
 module.exports = router;

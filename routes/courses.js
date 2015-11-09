@@ -3,10 +3,8 @@ var Logger = require('le_node');
 var log = new Logger({
     token: '53ee35a0-698a-4357-b3b7-c1c39139856a'
 });
+var analytics = require('../middleware/analytics');
 var Underscore = require('underscore');
-var Chance = require('chance');
-
-var chance = new Chance();
 
 
 router.use(function (req, res, next) {
@@ -174,13 +172,7 @@ router.get('/:courseid/classes/:classid', function (req, res) {
                     var response = data[0];
                     response.CourseOrder = course[0].Classes.indexOf(req.params.classid) + 1;
                     if (!req.User.Admin && response.Active) {
-                        log.info({
-                            _course: req.params.courseid,
-                            _class: req.params.classid,
-                            Method: 'GET',
-                            action: 'Started Class',
-                            msg: 'Entered ' + req.params.classid + ' class in ' + req.params.courseid + ' course.'
-                        });
+                        analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email);
                         res.status(200).json(response);
                     } else if (!req.User.Admin && !response.Active) {
                         res.status(400).json({error: req.params.classid + ' is inactive'})

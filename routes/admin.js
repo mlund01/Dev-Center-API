@@ -25,7 +25,7 @@ router.post('/registeruser', function(req, res) {
                         newUser,
                         function(err, data) {
                             if (!err) {
-                                if (req.UserEnv == 'production') {
+                                if (req.UserEnv == 'users') {
                                     analytics.registrationEvent(req.body, true);
                                 }
                                 res.status(204).send();

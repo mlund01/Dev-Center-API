@@ -172,7 +172,9 @@ router.get('/:courseid/classes/:classid', function (req, res) {
                     var response = data[0];
                     response.CourseOrder = course[0].Classes.indexOf(req.params.classid) + 1;
                     if (!req.User.Admin && response.Active) {
-                        analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email);
+                        if (req.UserEnv == 'users') {
+                            analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email);
+                        }
                         res.status(200).json(response);
                     } else if (!req.User.Admin && !response.Active) {
                         res.status(400).json({error: req.params.classid + ' is inactive'})

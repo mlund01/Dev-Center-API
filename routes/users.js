@@ -193,6 +193,62 @@ router.get('/progress/courses/:courseid', function(req, res) {
   })
 });
 
+
+router.post('/class-progress/:classid', function(req, res) {
+  if (!req.body) {
+    res.status(403).json({msg: 'must provide request body'});
+  } else {
+    var update = {
+      Method: req.body.Method,
+      Count: req.body.Count
+    };
+    db.collection(req.UserEnv).findOne({Identity: req.User.Identity, "Courses.Progress.ClassSteps.Method": req.body.Method}, function(err, data) {
+      if (err) {
+        res.status(500).json({msg: 'could not update user at this time', error: err})
+      } else if (!data) {
+        db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$push": {"Courses.Progress.ClassSteps": update}}, function(err, data) {
+          if (err) {
+            res.status(500).json({msg: 'could not update user at this time', error: err});
+          } else if (data.result.nModified == 0) {
+            res.status(404).json({msg: 'could not add class progress to user object'});
+          } else {
+            res.status(204).send();
+          }
+        })
+      } else {
+        db.collection(req.UserEnv).updateOne({Identity: req.User.Identity, "Courses.Progress.ClassSteps.Method": req.body.Method}, {"$set": {"Courses.Progress.ClassSteps.$": update}}, function(err, data) {
+          if (err) {
+            res.status(500).json({msg: 'could not update user at this time', error: err});
+          } else if (data.result.nModified == 0) {
+            res.status(404).json({msg: 'could not add class progress to user object'});
+          } else {
+            res.status(204).send();
+          }
+        })
+      }
+    })
+
+  }
+});
+
+router.get("/class-progress/:classid", function(req, res) {
+  db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, data) {
+    if (err) {
+      res.status(500).json({msg: 'could not get class progress at this time', error: err});
+    } else if (!data) {
+      res.status(404).json({msg: 'could not find user'});
+    } else {
+      if (data.Courses && data.Courses.Progress) {
+        res.status(200).json(data.Courses.Progress.ClassSteps);
+      } else {
+        res.status(200).json({});
+      }
+
+    }
+  })
+});
+
+
 router.post('/saved-states/context', function(req, res) {
   //set ClientID State
   if (!req.body) {

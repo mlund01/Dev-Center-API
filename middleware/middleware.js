@@ -45,7 +45,6 @@ router.use(function(req, res, next) {
                         if (!err && data) {
                             req.AccessGranted = true;
                             req.User = data;
-                            console.log(req.User);
                             next();
                         } else {
                             res.status(406).json({msg: 'Token accepted but user could not be found'})

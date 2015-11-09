@@ -1,44 +1,18 @@
 var router = require('express').Router();
-var jwt = require('jsonwebtoken');
-
-
 var password_1 = app.get('encryption_key_1');
 
-
+var analytics = require('../middleware/analytics');
 
 router.post('/registeruser', function(req, res) {
-    console.log('hit!');
-    console.log(req.body);
     if (!req.query.secret_key || req.query.secret_key != password_1) {
         res.status(403).json({msg: 'secret_key is incorrect or not provided'})
     } else {
-        function registerEvent(Pass, Msg) {
-            var eventObj = {
-                Username: req.body.Username,
-                Email: req.body.Email,
-                FirstName: req.body.FirstName,
-                LastName: req.body.LastName,
-                Pass: Pass,
-                Message: Msg | null
-            };
-            keen.addEvent("registration", eventObj, function(err, res) {
-                if (err) {
-                    console.log("could not log registration event");
-                } else if (res.created) {
-                    console.log("registation event successfully logged");
-                }
-            })
-        }
-
-
         if (req.body.Email || req.body.Username) {
             var hash = req.body.MongoDBHash;
             db.collection(req.UserEnv).findOne({Identity: hash}, function(err, data) {
                 if (data) {
-                    registerEvent(false, "User already exists");
                     res.status(401).json({error: 'User already exists'});
                 } else {
-                    console.log(req.body);
                     var newUser = {
                         Identity: hash,
                         Admin: false,
@@ -51,11 +25,11 @@ router.post('/registeruser', function(req, res) {
                         newUser,
                         function(err, data) {
                             if (!err) {
-                                registerEvent(true);
+                                    analytics.registrationEvent(req.body, true);
+
                                 res.status(204).send();
                             } else {
-                                registerEvent(false, "mongo error on create user");
-                                res.status(401).json({error: 'Could Not Create New User', mongoError: err});
+                                res.status(500).json({error: 'Could Not Create New User', mongoError: err});
                             }
                         })
                 }
@@ -63,10 +37,17 @@ router.post('/registeruser', function(req, res) {
 
         } else {
             res.status(401).json({error: "Must provide 'Email' or 'UserName'"});
-            registerEvent(false, "mongo error on find user");
         }
     }
 
+});
+
+router.get('/isadmin', function(req, res) {
+    if (req.User && req.User.Admin) {
+        res.status(204).send();
+    } else {
+        res.status(406).json({error: 'You Must Be an Admin to Access this page'});
+    }
 });
 
 /*router.use(function(req, res, next) {

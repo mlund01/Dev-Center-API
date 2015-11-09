@@ -25,8 +25,9 @@ router.post('/registeruser', function(req, res) {
                         newUser,
                         function(err, data) {
                             if (!err) {
+                                if (req.UserEnv == 'production') {
                                     analytics.registrationEvent(req.body, true);
-
+                                }
                                 res.status(204).send();
                             } else {
                                 res.status(500).json({error: 'Could Not Create New User', mongoError: err});

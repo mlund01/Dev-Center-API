@@ -204,7 +204,7 @@ router.use(function (req, res, next) {
 
 function copyToClassArchive(classObj, user) {
     var d = new Date();
-    classObj.ModifiedOn = d.toISOString();
+    classObj.ModifiedOn = d;
     classObj.UpdatedBy = user.Username;
     db.collection('class_archive').insertOne(classObj);
 }
@@ -546,7 +546,7 @@ router.delete('/class/:classid/delete', function (req, res) {
                     res.status(500).json({error: 'could not remove class at this time'})
                 } else if (data) {
                     var d = new Date();
-                    data.ModifiedOn = d.toISOString();
+                    data.ModifiedOn = d;
                     data.UpdatedBy = req.User.Username;
                     db.collection('class_archive').insertOne(data, function (err, data) {
                         if (err) {
@@ -585,7 +585,7 @@ router.post('/course/create', function (req, res) {
                 res.status(500).json({error: err})
             } else {
                 var d = new Date();
-                var d = d.toISOString();
+                var d = d;
                 var courseCount = Underscore.where(data, {_id: 'developer'})[0].count;
                 db.collection('courses').insertOne(
                  {
@@ -633,7 +633,7 @@ router.post('/course/:courseid/update', function (req, res) {
                 res.status(404).json({msg: 'course not found'})
             } else {
                 var d = new Date();
-                data.ModifiedOn = d.toISOString();
+                data.ModifiedOn = d;
                 data.UpdatedBy = req.User.Username;
                 db.collection('course_archive').insertOne(data, function (err, result) {
                     if (err) {

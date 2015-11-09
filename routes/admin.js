@@ -21,7 +21,7 @@ router.post('/registeruser', function(req, res) {
                         Email: req.body.Email,
                         FirstName: req.body.FirstName,
                         LastName: req.body.LastName,
-                        RegistrationDate: d.toISOString()
+                        RegistrationDate: d
                     };
                     db.collection(req.UserEnv).insertOne(
                         newUser,

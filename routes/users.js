@@ -148,7 +148,7 @@ router.get('/progress/courses/:courseid', function(req, res) {
   //Get Course Progress
   db.collection('courses').findOne({ID: req.params.courseid}, {_id: 0, Classes: 1}, function(err, course) {
     if (err) {
-      res.status(500).json({error: 'Could not process request at this time'});
+      res.status(500).json({error: 'server error', stack: err});
     } else if (!course) {
       res.status(404).json({error: 'Could not find course'});
     } else {
@@ -178,8 +178,6 @@ router.get('/progress/courses/:courseid', function(req, res) {
             db.collection(req.UserEnv).updateOne({Identity: user.Identity}, {"$set": {"Courses.Progress.Classes": []}}, function(err, data) {
               if (err) {
                 res.status(500).json({error: 'server error', stack: err});
-              } else if (data.result.nModified == 0) {
-                res.status(404).json({error: 'user not found'})
               } else {
                 res.status(200).json({Meta: {Count: 0, TotalClasses: course.Classes.length, PercentDone: 0}, CompletedClasses: []})
               }

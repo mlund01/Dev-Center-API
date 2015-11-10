@@ -45,7 +45,6 @@ router.get('/', function (req, res) {
             }
             else {
                 data = Underscore.where(data, {Active: true});
-                log.info({msg: 'Entered Courses Page'});
                 res.status(200).json(data);
             }
 
@@ -81,12 +80,6 @@ router.get('/:courseid', function (req, res) {
                     if (!data[0].Active) {
                         res.status(404).json({error: req.params.courseid + ' is inactive'})
                     } else {
-                        log.info({
-                            course: req.params.courseid,
-                            method: 'GET',
-                            action: 'Viewed Course',
-                            msg: 'Entered ' + req.params.courseid + ' Course Page'
-                        });
                         res.status(200).json(data[0]);
                     }
                 } else {
@@ -172,7 +165,9 @@ router.get('/:courseid/classes/:classid', function (req, res) {
                     var response = data[0];
                     response.CourseOrder = course[0].Classes.indexOf(req.params.classid) + 1;
                     if (!req.User.Admin && response.Active) {
-                        analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email);
+                        if (req.UserEnv == 'users') {
+                            analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email);
+                        }
                         res.status(200).json(response);
                     } else if (!req.User.Admin && !response.Active) {
                         res.status(400).json({error: req.params.classid + ' is inactive'})
@@ -202,7 +197,7 @@ router.use(function (req, res, next) {
 
 function copyToClassArchive(classObj, user) {
     var d = new Date();
-    classObj.ModifiedOn = d.toISOString();
+    classObj.ModifiedOn = d;
     classObj.UpdatedBy = user.Username;
     db.collection('class_archive').insertOne(classObj);
 }
@@ -219,7 +214,7 @@ router.post('/:courseid/classes/:classid', function (req, res) {
         }
         db.collection('classes').findOne({ID: req.params.classid}, {_ID: 0}, function (err, data) {
             if (err) {
-                res.status(500).json({msg: 'Could not copy class, class not updated', error: err})
+                res.status(500).json({error: 'Could not copy class, class not updated', stack: err})
             } else if (!data) {
                 res.status(404).json({msg: 'class not found'})
             } else {
@@ -326,7 +321,7 @@ router.post('/:courseid/staged-classes/:classid', function (req, res) {
             {_id: 0},
             function (err, data) {
                 if (err) {
-                    req.status(500).json({msg: 'could not make copy of class', error: err})
+                    req.status(500).json({error: 'could not make copy of class', stack: err})
                 } else if (!data) {
                     req.status(404).json({msg: 'Class not found in staging'})
                 } else {
@@ -363,7 +358,7 @@ router.post('/:courseid/staged-classes/:classid', function (req, res) {
 router.delete('/:courseid/staged-classes/:classid/cancel', function (req, res) {
   db.collection('staged_classes').removeOne({ID: req.params.classid}, function(err, data) {
       if (err) {
-          res.status(500).json({msg: 'could not remove staged_class', error: err})
+          res.status(500).json({error: 'could not remove staged_class', stack: err})
       } else if (data.result.nModified == 0) {
           res.status(404).json({msg: 'could not find class in staging'})
       } else {
@@ -387,13 +382,13 @@ router.post('/:courseid/staged-classes/:classid/replace', function (req, res) {
         {_id: 0},
         function (err, newClass) {
             if (err) {
-                res.status(500).json({msg: 'could not make copy of class', error: err})
+                res.status(500).json({error: 'could not make copy of class', stack: err})
             } else if (!newClass) {
                 res.status(404).json({msg: 'Class not found in staging'})
             } else {
                 db.collection('classes').findOne({ID: req.params.classid}, {_id: 0}, function (err, oldClass) {
                     if (err) {
-                        res.status(500).json({msg: 'Server Error', error: err})
+                        res.status(500).json({error: 'Server Error', stack: err})
                     } else if (!oldClass) {
                         res.status(404).json({msg: 'Class not found in classes collection'})
                     } else {
@@ -401,15 +396,15 @@ router.post('/:courseid/staged-classes/:classid/replace', function (req, res) {
                         newClass.EditMode = false;
                         db.collection('classes').replaceOne({ID: req.params.classid}, newClass, function (err, data2) {
                             if (err) {
-                                res.status(500).json({msg: 'Server Error', error: err})
+                                res.status(500).json({error: 'Server Error', stack: err})
                             } else if (data2.result.nModified == 0) {
                                 res.status(404).json({msg: 'Class not found in classes collection'})
                             } else {
                                 db.collection('staged_classes').removeOne({ID: req.params.classid}, function (err, data3) {
                                     if (err) {
                                         res.status(500).json({
-                                            msg: 'class replaced but not removed from staging, please remove manually',
-                                            error: err
+                                            error: 'class replaced but not removed from staging, please remove manually',
+                                            stack: err
                                         })
                                     } else if (data3.result.nModified == 0) {
                                         res.status(404).json({msg: 'class replaced but could not be found to replace in staging, please replace manually'})
@@ -443,7 +438,7 @@ router.post('/:courseid/create-class', function (req, res) {
                 var classid = req.body.ID;
                 db.collection('classes').findOne({ID: classid}, function(err, data) {
                     if (err) {
-                        res.status(500).json({error: err})
+                        res.status(500).json({error: 'server error', stack: err})
                     } else if (data) {
                         res.status(406).json({msg: 'classID already exists!'})
                     } else {
@@ -464,8 +459,8 @@ router.post('/:courseid/create-class', function (req, res) {
                             function (err, result) {
                                 if (err) {
                                     res.status(500).json({
-                                        msg: 'could not create new class at this time',
-                                        error: err
+                                        error: 'could not create new class at this time',
+                                        stack: err
                                     });
                                 } else {
                                     db.collection('courses').updateOne({ID: req.params.courseid}, {"$push": {Classes: classid}}, function (err, data) {
@@ -544,7 +539,7 @@ router.delete('/class/:classid/delete', function (req, res) {
                     res.status(500).json({error: 'could not remove class at this time'})
                 } else if (data) {
                     var d = new Date();
-                    data.ModifiedOn = d.toISOString();
+                    data.ModifiedOn = d;
                     data.UpdatedBy = req.User.Username;
                     db.collection('class_archive').insertOne(data, function (err, data) {
                         if (err) {
@@ -576,14 +571,14 @@ router.post('/course/create', function (req, res) {
     var fields = ['ID', 'CourseType', 'Name'];
     var errors = requireFields(fields, req.body);
     if (errors.length > 0) {
-        res.status(406).json({error: 'Missing fields', msg: errors});
+        res.status(406).json({error: 'Missing fields', stack: errors});
     } else if (req.body.CourseType == 'developer' || req.body.CourseType == 'business') {
         db.collection('courses').aggregate({"$group": {"_id": "$CourseType", "count": {"$sum": 1}}}, function(err, data) {
             if (err) {
                 res.status(500).json({error: err})
             } else {
                 var d = new Date();
-                var d = d.toISOString();
+                var d = d;
                 var courseCount = Underscore.where(data, {_id: 'developer'})[0].count;
                 db.collection('courses').insertOne(
                  {
@@ -626,18 +621,18 @@ router.post('/course/:courseid/update', function (req, res) {
     } else {
         db.collection('courses').findOne({ID: req.params.courseid}, {_id: 0}, function (err, data) {
             if (err) {
-                res.status(500).json({msg: 'could not update course at this time', error: err})
+                res.status(500).json({error: 'server error', stack: err})
             } else if (!data) {
-                res.status(404).json({msg: 'course not found'})
+                res.status(404).json({error: 'course not found'})
             } else {
                 var d = new Date();
-                data.ModifiedOn = d.toISOString();
+                data.ModifiedOn = d;
                 data.UpdatedBy = req.User.Username;
                 db.collection('course_archive').insertOne(data, function (err, result) {
                     if (err) {
-                        res.status(500).json({msg: 'could not update course at this time', error: err})
+                        res.status(500).json({error: 'could not update course at this time', stack: err})
                     } else if (result.result.nInserted == 0) {
-                        res.status(500).json({msg: 'could not make copy of class at this time'})
+                        res.status(500).json({error: 'could not make copy of class at this time'})
                     } else {
                         db.collection('courses').replaceOne(
                             {ID: req.params.courseid},

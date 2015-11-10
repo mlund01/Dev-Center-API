@@ -13,7 +13,7 @@ router.use(function(req, res, next) {
     if (req.headers.environment == 'test') {
         req.UserEnv = 'testusers';
         next();
-    } else if (req.headers.environment == 'production') {
+    } else if (req.headers.environment == 'prod') {
         req.UserEnv = 'users';
         next();
     } else if (req.headers.environment == 'qa') {
@@ -24,7 +24,7 @@ router.use(function(req, res, next) {
         next()
     }
     else {
-        res.status(403).json({error: '"Environment" Header must be set to "test", "qa", or "production"'})
+        res.status(403).json({error: '"Environment" Header must be set to "test", "qa", or "prod"'})
     }
 
 });
@@ -45,10 +45,9 @@ router.use(function(req, res, next) {
                         if (!err && data) {
                             req.AccessGranted = true;
                             req.User = data;
-                            console.log(req.User);
                             next();
                         } else {
-                            res.status(406).json({msg: 'Token accepted but user could not be found'})
+                            res.status(406).json({error: 'Token accepted but user could not be found'})
                         }
                     });
                 }

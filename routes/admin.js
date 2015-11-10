@@ -13,23 +13,26 @@ router.post('/registeruser', function(req, res) {
                 if (data) {
                     res.status(401).json({error: 'User already exists'});
                 } else {
+                    var d = new Date();
                     var newUser = {
                         Identity: hash,
                         Admin: false,
                         Username: req.body.Username,
                         Email: req.body.Email,
                         FirstName: req.body.FirstName,
-                        LastName: req.body.LastName
+                        LastName: req.body.LastName,
+                        RegistrationDate: d
                     };
                     db.collection(req.UserEnv).insertOne(
                         newUser,
                         function(err, data) {
                             if (!err) {
+                                if (req.UserEnv == 'users') {
                                     analytics.registrationEvent(req.body, true);
-
+                                }
                                 res.status(204).send();
                             } else {
-                                res.status(500).json({error: 'Could Not Create New User', mongoError: err});
+                                res.status(500).json({error: 'Could Not Create New User', stack: err});
                             }
                         })
                 }

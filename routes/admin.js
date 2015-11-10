@@ -32,7 +32,7 @@ router.post('/registeruser', function(req, res) {
                                 }
                                 res.status(204).send();
                             } else {
-                                res.status(500).json({error: 'Could Not Create New User', mongoError: err});
+                                res.status(500).json({error: 'Could Not Create New User', stack: err});
                             }
                         })
                 }

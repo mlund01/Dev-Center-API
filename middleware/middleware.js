@@ -47,7 +47,7 @@ router.use(function(req, res, next) {
                             req.User = data;
                             next();
                         } else {
-                            res.status(406).json({msg: 'Token accepted but user could not be found'})
+                            res.status(406).json({error: 'Token accepted but user could not be found'})
                         }
                     });
                 }

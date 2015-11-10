@@ -18,7 +18,7 @@ router.get('/', function(req, res) {
   //Get User
   db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, {Identity: 0, _id: 0}, function(err, data) {
     if (err) {
-      res.status(500).json({msg: 'Could not process request', error: err});
+      res.status(500).json({error: 'Could not process request', stack: err});
     } else {
       res.status(200).json(data);
     }
@@ -39,7 +39,7 @@ router.post('/oc-vars', function(req, res) {
 
     db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$push": {"Courses.OcVars": {key: req.body.key, val: req.body.val, hash: chance.hash({length: 15})}}}, function(err, data) {
       if (err) {
-        res.status(500).json({msg: 'could not add value', error: err});
+        res.status(500).json({error: 'server error', stack: err});
       } else if (data.result.nModified == 0){
         res.status(404).json({error: 'Could not find user'})
       } else {
@@ -54,9 +54,9 @@ router.get('/oc-vars', function(req, res) {
   //Get OC Variable
   db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, data) {
     if (err) {
-      res.status(500).json({msg: 'Could not get variables', error: err})
+      res.status(500).json({error: 'Could not get variables', stack: err})
     } else if (!data) {
-      res.status(404).json({msg: 'User Not Found'});
+      res.status(404).json({error: 'User Not Found'});
     }
     else
      {
@@ -65,7 +65,7 @@ router.get('/oc-vars', function(req, res) {
        } else {
          db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$set": {"Courses.OcVars": []}}, function(err, data) {
            if (err) {
-             res.status(500).json({error: err})
+             res.status(500).json({error: 'server error', stack: err})
            } else if (data.result.nModified == 0) {
              res.status(404).json({error: 'user not found'})
            } else {
@@ -83,7 +83,7 @@ router.delete('/oc-vars/:hash', function(req, res) {
   //Delete OC Variable
   db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$pull": {"Courses.OcVars": {"hash": req.params.hash}}}, function(err, data) {
     if (err) {
-      res.status(500).json({msg: 'could not delete', error: err});
+      res.status(500).json({error: 'could not delete', stack: err});
     } else if (data.result.nModified == 0){
       res.status(404).json({error: 'Could not delete'})
     } else {
@@ -110,7 +110,7 @@ router.patch('/oc-vars/:hash', function(req, res) {
     } else {
       db.collection(req.UserEnv).updateOne({Identity: req.User.Identity, "Courses.OcVars.hash": req.params.hash}, {"$set": updateVals}, function(err, data) {
         if (err) {
-          res.status(406).json({msg: 'Cannot update object at this time', error: err});
+          res.status(406).json({error: 'Cannot update object at this time', stack: err});
         } else if (data.result.n == 0) {
           res.status(406).json({error: 'Variable could not be found'});
         } else {
@@ -126,13 +126,13 @@ router.post('/progress/:classid', function(req, res) {
   //Save Class Progress
   db.collection('classes').findOne({ID: req.params.classid}, function(err, data) {
     if (err) {
-      res.status(500).json({msg: 'could not access class in db', error: err})
+      res.status(500).json({error: 'could not access class in db', stack: err})
     } else if (!data) {
       res.status(404).json({error: req.params.classid + " class does not exist"});
     } else {
       db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$addToSet": {"Courses.Progress.Classes": req.params.classid}}, function(err, data) {
         if (err) {
-          res.status(500).json({msg: 'could not add classid to user object', error: err});
+          res.status(500).json({error: 'could not add classid to user object', stack: err});
         } else if (data.result.nModified == 0) {
           res.status(204).send();
         } else {
@@ -177,7 +177,7 @@ router.get('/progress/courses/:courseid', function(req, res) {
           } else {
             db.collection(req.UserEnv).updateOne({Identity: user.Identity}, {"$set": {"Courses.Progress.Classes": []}}, function(err, data) {
               if (err) {
-                res.status(500).json({error: err});
+                res.status(500).json({error: 'server error', stack: err});
               } else if (data.result.nModified == 0) {
                 res.status(404).json({error: 'user not found'})
               } else {
@@ -196,7 +196,7 @@ router.get('/progress/courses/:courseid', function(req, res) {
 
 router.post('/class-progress/:classid', function(req, res) {
   if (!req.body) {
-    res.status(403).json({msg: 'must provide request body'});
+    res.status(403).json({error: 'must provide request body'});
   } else {
     var update = {
       Method: req.body.Method,
@@ -204,13 +204,13 @@ router.post('/class-progress/:classid', function(req, res) {
     };
     db.collection(req.UserEnv).findOne({Identity: req.User.Identity, "Courses.Progress.ClassSteps.Method": req.body.Method}, function(err, data) {
       if (err) {
-        res.status(500).json({msg: 'could not update user at this time', error: err})
+        res.status(500).json({error: 'server error', stack: err})
       } else if (!data) {
         db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$push": {"Courses.Progress.ClassSteps": update}}, function(err, data) {
           if (err) {
-            res.status(500).json({msg: 'could not update user at this time', error: err});
+            res.status(500).json({error: 'could not update user at this time', stack: err});
           } else if (data.result.nModified == 0) {
-            res.status(404).json({msg: 'could not add class progress to user object'});
+            res.status(404).json({error: 'could not add class progress to user object'});
           } else {
             res.status(204).send();
           }
@@ -218,9 +218,9 @@ router.post('/class-progress/:classid', function(req, res) {
       } else {
         db.collection(req.UserEnv).updateOne({Identity: req.User.Identity, "Courses.Progress.ClassSteps.Method": req.body.Method}, {"$set": {"Courses.Progress.ClassSteps.$": update}}, function(err, data) {
           if (err) {
-            res.status(500).json({msg: 'could not update user at this time', error: err});
+            res.status(500).json({error: 'could not update user at this time', stack: err});
           } else if (data.result.nModified == 0) {
-            res.status(404).json({msg: 'could not add class progress to user object'});
+            res.status(404).json({error: 'could not add class progress to user object'});
           } else {
             res.status(204).send();
           }
@@ -234,9 +234,9 @@ router.post('/class-progress/:classid', function(req, res) {
 router.get("/class-progress/:classid", function(req, res) {
   db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, data) {
     if (err) {
-      res.status(500).json({msg: 'could not get class progress at this time', error: err});
+      res.status(500).json({error: 'could not get class progress at this time', stack: err});
     } else if (!data) {
-      res.status(404).json({msg: 'could not find user'});
+      res.status(404).json({error: 'could not find user'});
     } else {
       if (data.Courses && data.Courses.Progress) {
         res.status(200).json(data.Courses.Progress.ClassSteps);
@@ -252,11 +252,11 @@ router.get("/class-progress/:classid", function(req, res) {
 router.post('/saved-states/context', function(req, res) {
   //set ClientID State
   if (!req.body) {
-    res.status(406).json({msg: 'must provide request body'})
+    res.status(406).json({error: 'must provide request body'})
   } else {
     db.collection(req.UserEnv).updateOne({Identity: req.User.Identity}, {"$set": {"Courses.State.Context": req.body}}, function(err, data) {
       if (err) {
-        res.status(500).json({msg: 'could not set Context at this time', error: err})
+        res.status(500).json({error: 'could not set Context at this time', stack: err})
       }else {
         res.status(204).send();
       }
@@ -268,9 +268,9 @@ router.get('/saved-states/context', function(req, res) {
   //set ClientID State
   db.collection(req.UserEnv).findOne({Identity: req.User.Identity}, function(err, data) {
     if (err) {
-      res.status(500).json({msg: 'could not find Context at this time', error: err})
+      res.status(500).json({error: 'could not find Context at this time', stack: err})
     } else if (!data) {
-      res.status(404).json({msg: 'could not find user'})
+      res.status(404).json({error: 'could not find user'})
     } else {
       if (data.Courses && data.Courses.State && data.Courses.State.Context) {
         res.status(200).json(data.Courses.State.Context);

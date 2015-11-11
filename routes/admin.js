@@ -2,6 +2,24 @@ var router = require('express').Router();
 var password_1 = app.get('encryption_key_1');
 
 var analytics = require('../middleware/analytics');
+var https = require('https');
+
+function sendRegisterEvent() {
+    var post_data =  'args=go';
+
+    var eventOptions = {
+        host: 'api.particle.io',
+        path: '/v1/devices/370025001747343337363432/led?access_token=97130ec88fb2e1bad02b27ba1c7188f3373939b1',
+        method: 'POST'
+    };
+
+    var post_req = https.request(eventOptions, function(res) {
+        res.setEncoding('utf8');
+    });
+
+    post_req.write(post_data);
+    post_req.end();
+}
 
 router.post('/registeruser', function(req, res) {
     if (!req.query.secret_key || req.query.secret_key != password_1) {
@@ -30,6 +48,8 @@ router.post('/registeruser', function(req, res) {
                                 if (req.UserEnv == 'users') {
                                     analytics.registrationEvent(req.body, true);
                                 }
+                                sendRegisterEvent();
+                                console.log('hit');
                                 res.status(204).send();
                             } else {
                                 res.status(500).json({error: 'Could Not Create New User', stack: err});

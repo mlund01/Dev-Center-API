@@ -47,8 +47,8 @@ router.post('/registeruser', function(req, res) {
                             if (!err) {
                                 if (req.UserEnv == 'users') {
                                     analytics.registrationEvent(req.body, true);
+                                    sendRegisterEvent();
                                 }
-                                sendRegisterEvent();
                                 console.log('hit');
                                 res.status(204).send();
                             } else {

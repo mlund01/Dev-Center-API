@@ -67,9 +67,9 @@ router.post('/registeruser', function(req, res) {
 
 router.get('/isadmin', function(req, res) {
     if (req.User && req.User.Admin) {
-        res.status(204).send();
+        res.status(200).send({admin: true});
     } else {
-        res.status(406).json({error: 'You Must Be an Admin to Access this page'});
+        res.status(200).json({admin: false});
     }
 });
 

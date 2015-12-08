@@ -14,7 +14,6 @@ function start() {
     var uri = "mongodb://devadmin:fails345@ds039024-a0.mongolab.com:39024,ds039024-a.mongolab.com:39024/451devcenter?replicaSet=rs-ds039024";
     var bodyParser = require('body-parser');
     var localConfig = require('./localConfig');
-    var Keen = require('keen-js');
 
 
     MongoClient.connect(uri, function(err, database) {
@@ -58,6 +57,7 @@ function start() {
 
 //app.use('/test', require('./routes/test'));
     app.use('/authenticate', require('./routes/auth'));
+    app.use('/analytics', require('./routes/analytics'));
     app.use('/admin', require('./routes/admin'));
     app.use('/courses', require('./routes/courses'));
     app.use('/users', require('./routes/users'));

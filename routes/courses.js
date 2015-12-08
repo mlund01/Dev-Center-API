@@ -166,7 +166,7 @@ router.get('/:courseid/classes/:classid', function (req, res) {
                     response.CourseOrder = course[0].Classes.indexOf(req.params.classid) + 1;
                     if (!req.User.Admin && response.Active) {
                         if (req.UserEnv == 'users') {
-                            analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email);
+                            analytics.classEntryEvent(req.params.courseid, req.params.classid, req.User.Email, req.User.FirstName, req.User.LastName);
                         }
                         res.status(200).json(response);
                     } else if (!req.User.Admin && !response.Active) {
